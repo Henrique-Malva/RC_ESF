@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "cstdlib": "c",
+        "string.h": "c",
+        "challenge.h": "c",
+        "structs.h": "c",
+        "server.h": "c",
+        "engineers.h": "c",
+        "chrono": "c",
+        "*.tcc": "c",
+        "organization.h": "c"
+    }
+}
