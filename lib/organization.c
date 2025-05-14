@@ -165,9 +165,10 @@ int get_all_organizations(organization** organizations, char* condition) {
 }
 
 void organizationRegister(int client_fd) {
+    organization* o;
 
-    char orgName[100], taxID[20], email[100], address[200], description[300], phone[20], pass[20];
-    int nread;
+    char orgName[100], tax[20], email[100], address[200], description[300], phone[20], pass[20], buffer[BUF_SIZE];
+    int nread, check=0, taxID;
 
     // Get organization details
     write(client_fd, "Enter the organization name: ", strlen("Enter the organization name: "));
@@ -179,13 +180,40 @@ void organizationRegister(int client_fd) {
     nread = read(client_fd, pass, 20 - 1);
     pass[nread - 2] = '\0';
 
-    write(client_fd, "Enter the tax identification number: ", strlen("Enter the tax identification number: "));
-    nread = read(client_fd, taxID, 20 - 1);
-    taxID[nread - 2] = '\0';
 
-    write(client_fd, "Enter the organization's email address: ", strlen("Enter the organization's email address: "));
-    nread = read(client_fd, email, 100 - 1);
-    email[nread - 2] = '\0';
+    do
+    {
+        if (check)
+        {
+            write(client_fd, "This tax identification number is already in use\n\n", strlen("This tax identification number is already in use\n\n"));
+        }
+        check=1;
+        
+        write(client_fd, "Enter the tax identification number: ", strlen("Enter the tax identification number: "));
+        nread = read(client_fd, tax, 20 - 1);
+        tax[nread - 2] = '\0';
+        taxID=atoi(tax);
+        sprintf(buffer,"where tax_id='%d'",taxID);
+        
+    } while (get_all_organizations(o,buffer));
+    check=0;
+    
+    do
+    {
+        if (check)
+        {
+            write(client_fd,"This email is already in use\n\n",strlen("This email is already in use\n\n"));
+        }
+        check=1;
+
+        write(client_fd, "Enter the organization's email address: ", strlen("Enter the organization's email address: "));
+        nread = read(client_fd, email, 100 - 1);
+        email[nread - 2] = '\0';
+        sprintf(buffer,"where email='%s'",email);
+
+    } while (get_all_organizations(o,buffer));
+    check=0;
+    
 
     write(client_fd, "Enter the organization's address: ", strlen("Enter the organization's address: "));
     nread = read(client_fd, address, 200 - 1);

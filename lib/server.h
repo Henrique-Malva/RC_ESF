@@ -29,7 +29,7 @@ int authenticate_user(int client_fd, char *email);
 
 void send_engineer_menu(int client_fd, char *email);
 void send_organization_menu(int client_fd, char *email);
-void send_admin_menu(int client_fd);
+void send_admin_menu(int client_fd, char* email);
 
 
 

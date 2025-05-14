@@ -168,20 +168,33 @@ int get_all_engineers(engineer** engineers, char* condition) {
 void engineerRegister(int client_fd) {
 	int oeNumber;
     int nread;
-    bool studentStatus;
+    int studentStatus;
+    int check=0;
     char fullName[100], specialty[50], institution[100];
     char areasOfExpertise[200], email[100], phone[20], pass[20];
-    char buf[10];
+    char buf[10], buffer[BUF_SIZE];
+    engineer* eng; 
 
     // Get engineer's details
     write(client_fd, "Enter your full name: ", strlen("Enter your full name: "));
     nread = read(client_fd, fullName, 100 - 1);
     fullName[nread - 2] = '\0';
 
-    write(client_fd, "Enter your OE number: ", strlen("Enter your OE number: "));
-    nread = read(client_fd, buf, 10 - 1);
-    buf[nread - 2] = '\0';
-    oeNumber = atoi(buf);
+    do
+    {
+        if (check)
+        {
+            write(client_fd, "This OE number is already in use\n\n", strlen("This OE number is already in use\n\n"));
+        }
+        check=1;
+        
+        write(client_fd, "Enter your OE number: ", strlen("Enter your OE number: "));
+        nread = read(client_fd, buf, 10 - 1);
+        buf[nread - 2] = '\0';
+        oeNumber = atoi(buf);
+        sprintf(buffer,"where number='%d'",oeNumber);
+    } while (get_all_engineers(eng,buffer));
+    check=0;
 
     write(client_fd, "Enter a password: ", strlen("Enter a password: "));
     nread = read(client_fd, pass, 20 - 1);
@@ -204,9 +217,21 @@ void engineerRegister(int client_fd) {
     nread = read(client_fd, areasOfExpertise, 200 - 1);
     areasOfExpertise[nread - 2] = '\0';
 
-    write(client_fd, "Enter your email address: ", strlen("Enter your email address: "));
-    nread = read(client_fd, email, 100 - 1);
-    email[nread - 2] = '\0';
+    do
+    {
+        if (check)
+        {
+            write(client_fd, "This email is already in use\n\n", strlen("This email is already in use\n\n"));
+        }
+        check=1;
+
+        write(client_fd, "Enter your email address: ", strlen("Enter your email address: "));
+        nread = read(client_fd, email, 100 - 1);
+        email[nread - 2] = '\0';
+
+        sprintf(buffer,"where email='%s'", email);
+    } while (get_all_engineers(eng,buffer));
+    check=0;
 
     write(client_fd, " Enter your mobile phone number (optional): ", strlen(" Enter your mobile phone number (optional): "));
     nread = read(client_fd, phone, 20 - 1);

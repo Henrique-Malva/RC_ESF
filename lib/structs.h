@@ -79,6 +79,8 @@ typedef struct active {
     int Id;
     char* last_login;
     char* email;
+    char* password;
+    int role;
     int status;
 } active;
 

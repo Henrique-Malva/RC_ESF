@@ -3,6 +3,8 @@
 
 #include "structs.h"
 
+#define BUF_SIZE 1024
+
 int add_engineer(char* name, int number, char* specialty, char* institution, bool student, char* areas_of_expertise, char* email, char* phone, char* password, int status);
 int update_engineer(engineer* engineers);
 int remove_engineer(char* email);

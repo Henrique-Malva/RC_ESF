@@ -39,6 +39,7 @@ int closeFunction() { return -1; }
 // main client handling function where the operation flow is handled
 void process_client(int client_fd) {
     int choice = 0;
+    char buffer[BUF_SIZE];
     // welcome menu
     char* menu0 = "========================================================\n"
                 "        Welcome to engineers without borders!\n"
@@ -47,7 +48,7 @@ void process_client(int client_fd) {
                 "1. Login\n"
                 "2. Organization Registration\n"
                 "3. Engineer Registration\n"
-                "4. Logout\n"
+                "4. Exit\n"
                 "Enter your option (1-4): ";
 
     char email[100];
@@ -71,12 +72,11 @@ void process_client(int client_fd) {
                 send_organization_menu(client_fd, email);
                 break;
             case 2: // admin logged in
-                send_admin_menu(client_fd);
+                send_admin_menu(client_fd, email);
                 break;
             default: // no such user registered
                 writeStr(client_fd, "Closing connection.\n");
                 choice=4;
-                remove_actives(email);
                 close(client_fd);
                 break;
             }
@@ -148,7 +148,11 @@ void send_engineer_menu(int client_fd, char *email) {
                 update_engineer(eng);
                 break;
             default: // logout
-                remove_actives(email);
+                active* a;
+                sprintf(buffer,"where email='%s'",email);
+                get_all_actives(&a,buffer);
+                a->status=0;
+                update_active(a);
                 close(client_fd);
                 break;
         }
@@ -181,7 +185,6 @@ void send_organization_menu(int client_fd, char *email) {
     challenge* c;
     sprintf(buffer,"where email='%s'",email);
     get_all_organizations(&org, buffer);
-    //get_organization(&org, email);
 
     do
     {
@@ -251,7 +254,11 @@ void send_organization_menu(int client_fd, char *email) {
                 writeStr(client_fd, "not yet implemented");
                 break;
             default: // logout
-                remove_actives(email);
+                active* a;
+                sprintf(buffer,"where email='%s'",email);
+                get_all_actives(&a,buffer);
+                a->status=0;
+                update_active(a);
                 close(client_fd);
                 break;
         }
@@ -262,8 +269,9 @@ void send_organization_menu(int client_fd, char *email) {
 
 // admin handling function
 // presents the menu options for an admin and calls the functions responsible for the option selected by the user
-void send_admin_menu(int client_fd) {
+void send_admin_menu(int client_fd, char* email) {
     int state = 0;
+    char buffer[BUF_SIZE];
 
     // sends menu
     char* menu0 = "========================================================"
@@ -305,6 +313,11 @@ void send_admin_menu(int client_fd) {
                 break;
 
             case 4: // logout
+                active* a;
+                sprintf(buffer,"where email='%s'",email);
+                get_all_actives(&a,buffer);
+                a->status=0;
+                update_active(a);
                 close(client_fd);
                 break;
         }
@@ -329,30 +342,57 @@ int authenticate_user(int client_fd, char *email) {
     engineer* eng;
     organization* org;
     sprintf(email_cond,"where email='%s'",email);
-    active* active;
+    active* actives;
 
-
-    if (strcmp(email, "admin789") == 0) {
+    // first it will check the table of users with accepted registration
+    if (get_all_actives(&actives, email_cond)) {
+        // if the email is correct, asks for password
         writeStr(client_fd, password_prompt);
-        nread = read(client_fd, buffer, BUF_SIZE - 1);
-        buffer[nread - 2] = '\0';
-        if (strcmp(buffer, "adminpass") == 0) {
-            return 2; // Admin
+        nread = read(client_fd, pass, 200 - 1);
+        pass[nread - 2] = '\0';
+
+        // if the password is correct
+        if (strcmp(pass,actives->password)==0)
+        {
+            // checks if that client is already logged in
+
+            if (actives->status==1)
+            {
+                writeStr(client_fd, "Client already logged in\n");
+                return -1;
+            }else{
+                // if it isn't, updates the status and the last_login
+                actives->status=1;
+                strcpy(actives->last_login,"date");
+                update_active(actives);
+
+                return actives->role;
+            }
+            
+        }else{ // if the password is incorrect
+            
+            if (actives->role!=2) // informs the user of incorrect password only if it isn't an admin
+            // to prevent common users from finding out an admin login
+            {
+                writeStr(client_fd, "Wrong password\n");
+            }else{
+                printf("Attempted admin login. Wrong password\n");
+                writeStr(client_fd, authentication_error_prompt);
+            }
+            
+            return -1;
         }
-        // in the admin login there is no feedback about wrong password, so that a normal user doesn't find a admin username
-    } else if (get_all_engineers(&eng, email_cond)) {
+
+        // if there isn't anything in the actives it will check engineer and organization tables
+        // this tables save the registration status
+    }else if(get_all_engineers(&eng, email_cond)){
         writeStr(client_fd, password_prompt);
         nread = read(client_fd, pass, 200 - 1);
         pass[nread - 2] = '\0';
         
         if (strcmp(pass,eng->password) == 0)
         {
-            if (eng->status == 0) // registration accepted
-            {
-                sprintf(buffer,"where email='%s",email);
-                add_actives("date",email,1);
-                return 0; // Engineer
-            }else if (eng->status == 1){ // status pending
+            if (eng->status == 1){ // status pending
                 writeStr(client_fd, "Registration pending\n");
             }else { // status rejected
                 writeStr(client_fd, "Registration rejected. Please re-register or contact support\n");
@@ -364,20 +404,14 @@ int authenticate_user(int client_fd, char *email) {
             writeStr(client_fd, "Wrong password\n");
             return -1;
         }
-        
-    } else if (get_all_organizations(&org, email_cond)) {
+    }else if(get_all_organizations(&org, email_cond)){
         writeStr(client_fd, password_prompt);
         nread = read(client_fd, pass, 200 - 1);
         pass[nread - 2] = '\0';
 
         if (strcmp(pass,org->password) == 0)
         {
-            if (org->status == 0) // registration accepted
-            {
-                add_actives("date",email,1);
-                return 1; // Organization
-            }
-            else if (org->status == 1){ // status pending
+            if (org->status == 1){ // status pending
                 writeStr(client_fd, "Registration pending\n");
             }else { // status rejected
                 writeStr(client_fd, "Registration rejected. Please re-register or contact support\n");
@@ -389,11 +423,11 @@ int authenticate_user(int client_fd, char *email) {
             writeStr(client_fd, "Wrong password\n");
             return -1;
         }
-        
     }
     else
         writeStr(client_fd, authentication_error_prompt);
     return -1; // Authentication failed
+    
 }
 
 // funtion for ONG managment for use by the admin
@@ -447,9 +481,9 @@ void manageOrganizations(int client_fd, organization* organizations, int size){
 
         switch(choice){
 
-            case 1: currentOrg->status = 0; break; // change registration status to approved
-            case 2: currentOrg->status = 1; break; // change registration status to pending
-            case 3: currentOrg->status = 2; break; // change registration status to rejected
+            case 1: currentOrg->status = 0; add_actives("date",currentOrg->email,currentOrg->password,1,0); break; // change registration status to approved
+            case 2: currentOrg->status = 1; remove_actives(currentOrg->email); break; // change registration status to pending
+            case 3: currentOrg->status = 2; remove_actives(currentOrg->email); break; // change registration status to rejected
             case 4: remove_organization(currentOrg->email); break; // delete organization
             case 6: return; // previous menu
             default: break; // next org
@@ -531,9 +565,9 @@ void manageEngineers(int client_fd, engineer* engineers, int size){
 
         switch(choice){
 
-            case 1: currentEng->status = 0; break;
-            case 2: currentEng->status = 1; break;
-            case 3: currentEng->status = 2; break;
+            case 1: currentEng->status = 0; add_actives("date", currentEng->email, currentEng->password, 0, 0); break;
+            case 2: currentEng->status = 1; remove_actives(currentEng->email); break;
+            case 3: currentEng->status = 2; remove_actives(currentEng->email); break;
             case 4: remove_engineer(currentEng->email); break; // delete engineer
             case 6: return;
 

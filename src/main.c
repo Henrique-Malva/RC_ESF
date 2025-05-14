@@ -45,7 +45,12 @@ int main() {
     for (int i = 0; i < n; i++) {
         printf("%d: %s\n", i, o[i].email);
     }
-    
+    active* a;
+    n = get_all_actives(&a, "");
+    for (int i = 0; i < n; i++) {
+        printf("%d: %s\n", i, a[i].email);
+    }
+
 
     while (1) {
         client_addr_size = sizeof(client_addr);
