@@ -193,7 +193,7 @@ void engineerRegister(int client_fd) {
         buf[nread - 2] = '\0';
         oeNumber = atoi(buf);
         sprintf(buffer,"where number='%d'",oeNumber);
-    } while (get_all_engineers(eng,buffer));
+    } while (get_all_engineers(&eng,buffer));
     check=0;
 
     write(client_fd, "Enter a password: ", strlen("Enter a password: "));
@@ -230,7 +230,7 @@ void engineerRegister(int client_fd) {
         email[nread - 2] = '\0';
 
         sprintf(buffer,"where email='%s'", email);
-    } while (get_all_engineers(eng,buffer));
+    } while (get_all_engineers(&eng,buffer));
     check=0;
 
     write(client_fd, " Enter your mobile phone number (optional): ", strlen(" Enter your mobile phone number (optional): "));

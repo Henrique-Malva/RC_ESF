@@ -145,8 +145,8 @@ int update_active(active* actives) {
     }
 
     /* Create merged SQL statement */
-    sprintf(sql, "UPDATE clients SET last_login='%s',email='%s',password='%s',status='%d'; ",
-        actives->last_login, actives->email, actives->password, actives->status);
+    sprintf(sql, "UPDATE clients SET last_login='%s',email='%s',password='%s',status='%d' WHERE id='%d'; ",
+        actives->last_login, actives->email, actives->password, actives->status, actives->Id);
 
     /* Execute SQL statement */
     if(sqlite3_exec(db, sql, callback_actives, 0, &err) != SQLITE_OK){

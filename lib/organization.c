@@ -195,7 +195,7 @@ void organizationRegister(int client_fd) {
         taxID=atoi(tax);
         sprintf(buffer,"where tax_id='%d'",taxID);
         
-    } while (get_all_organizations(o,buffer));
+    } while (get_all_organizations(&o,buffer));
     check=0;
     
     do
@@ -211,7 +211,7 @@ void organizationRegister(int client_fd) {
         email[nread - 2] = '\0';
         sprintf(buffer,"where email='%s'",email);
 
-    } while (get_all_organizations(o,buffer));
+    } while (get_all_organizations(&o,buffer));
     check=0;
     
 

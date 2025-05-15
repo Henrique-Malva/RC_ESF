@@ -8,6 +8,7 @@
         "engineers.h": "c",
         "chrono": "c",
         "*.tcc": "c",
-        "organization.h": "c"
+        "organization.h": "c",
+        "typeinfo": "c"
     }
 }

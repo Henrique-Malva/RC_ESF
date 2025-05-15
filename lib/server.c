@@ -32,7 +32,6 @@ void writeStr(int client_fd, char* str){
 void manageOrganizations(int client_fd, organization* organizations, int size);
 void manageEngineers(int client_fd, engineer* engineers, int size);
 void manageChallenges(int client_fd, challenge* challenge_list, int size);
-void applyChallenges(int client_fd, challenge* challenge_list, int size);
 
 int closeFunction() { return -1; }
 
@@ -227,15 +226,16 @@ void send_organization_menu(int client_fd, char *email) {
                 }
 
                 break;
-            case 3: // update a challenge (rn it's just removing and readding, need change this)
+            case 3: // update a challenge 
                 writeStr(client_fd, "Challenge Name: ");
                 nread = read(client_fd, name, 200 - 1);
                 name[nread-2] = 0;
                 
-                sprintf(buffer,"where organization_id='%d',name='%s' ",org->organizationId,name);
+                sprintf(buffer,"WHERE name='%s' AND organization_id='%d'",name, org->organizationId);
+                printf("\n\ncond: %s\n\n",buffer);
                 get_all_challenges(&c, buffer);
 
-                // ask for challenge shiz
+                orgChallengeUpdate(client_fd,&c);
 
                 update_challenge(c);
 
@@ -246,7 +246,7 @@ void send_organization_menu(int client_fd, char *email) {
                 writeStr(client_fd, "Challenge name: ");
                 nread = read(client_fd, name, 200 - 1);
                 name[nread-2] = 0;
-                sprintf(buffer,"where organization_id='%d',name='%s';",org->organizationId,name);
+                sprintf(buffer,"WHERE name='%s' AND organization_id='%d'",name,org->organizationId);
                 get_all_challenges(&c, buffer);
                 remove_challenge(c->id);
                 break;
@@ -440,7 +440,7 @@ void manageOrganizations(int client_fd, organization* organizations, int size){
     int count = 0;
 
     // sends the menu to the organization
-    char* option_prompt = "\nPlease select one of the options below\n"
+    char* option_prompt = "\n\nPlease select one of the options below\n"
                           "1. Change the status to approved\n"
                           "2. Change the status to pending\n"
                           "3. Change the status to rejected\n"
@@ -481,10 +481,16 @@ void manageOrganizations(int client_fd, organization* organizations, int size){
 
         switch(choice){
 
-            case 1: currentOrg->status = 0; add_actives("date",currentOrg->email,currentOrg->password,1,0); break; // change registration status to approved
+            case 1: 
+                if (currentOrg->status != 0) // prevents adding to clients table if it's an already accepted registration
+                {
+                    currentOrg->status = 0; 
+                    add_actives("date",currentOrg->email,currentOrg->password,1,0); 
+                }
+                break; // change registration status to approved
             case 2: currentOrg->status = 1; remove_actives(currentOrg->email); break; // change registration status to pending
             case 3: currentOrg->status = 2; remove_actives(currentOrg->email); break; // change registration status to rejected
-            case 4: remove_organization(currentOrg->email); break; // delete organization
+            case 4: remove_actives(currentOrg->email); remove_organization(currentOrg->email); break; // delete organization
             case 6: return; // previous menu
             default: break; // next org
 
@@ -565,7 +571,14 @@ void manageEngineers(int client_fd, engineer* engineers, int size){
 
         switch(choice){
 
-            case 1: currentEng->status = 0; add_actives("date", currentEng->email, currentEng->password, 0, 0); break;
+            case 1: 
+                if (currentEng->status != 0)
+                {
+                    currentEng->status = 0; 
+                    add_actives("date", currentEng->email, currentEng->password, 0, 0); 
+                }
+                
+            break;
             case 2: currentEng->status = 1; remove_actives(currentEng->email); break;
             case 3: currentEng->status = 2; remove_actives(currentEng->email); break;
             case 4: remove_engineer(currentEng->email); break; // delete engineer
@@ -715,4 +728,53 @@ void applyChallenges(int client_fd, challenge* challenge_list, int size){
         }
 
     }
+}
+
+
+void orgChallengeUpdate(int client_fd, challenge** challenge){
+    char* chUpPrompt = "\n1: Name\n2: Description\n3: Engineer Type\n4: Hours\nOther: None\n"
+                    "\nSelect field to update: ";
+    int choice, nread;
+    uint8_t leave=0;
+    char buffer[BUF_SIZE];
+    do
+    {
+        writeStr(client_fd, chUpPrompt);
+        choice = getSelectedOptionInt(client_fd);
+
+        switch (choice)
+        {
+        case 1:
+            writeStr(client_fd, "\nChallenge Name: ");
+            nread = read(client_fd, buffer, BUF_SIZE-1);
+            buffer[nread-2] = '\0';
+            strcpy((*challenge)->name,buffer);
+
+            break;
+        case 2:
+            writeStr(client_fd, "\nChallenge Description: ");
+            nread = read(client_fd, buffer, BUF_SIZE-1);
+            buffer[nread-2] = '\0';
+            strcpy((*challenge)->description,buffer);
+            break;
+        case 3:
+            writeStr(client_fd, "\nEngineer Type: ");
+            nread = read(client_fd, buffer, BUF_SIZE-1);
+            buffer[nread-2] = '\0';
+            strcpy((*challenge)->engineerType,buffer);
+            break;
+        case 4:
+            writeStr(client_fd, "\nChallenge Hours: ");
+            nread = read(client_fd, buffer, BUF_SIZE-1);
+            buffer[nread-2] = '\0';
+            (*challenge)->hours=atoi(buffer);
+            break;
+        
+        default:
+            leave=1;
+            break;
+        }
+
+    } while (leave==0);    
+
 }

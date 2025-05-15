@@ -31,6 +31,9 @@ void send_engineer_menu(int client_fd, char *email);
 void send_organization_menu(int client_fd, char *email);
 void send_admin_menu(int client_fd, char* email);
 
+void applyChallenges(int client_fd, challenge* challenge_list, int size);
+void orgChallengeUpdate(int client_fd, challenge** challenge);
+
 
 
 #endif
