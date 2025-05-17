@@ -43,7 +43,7 @@ void deleteFromString(char string[], char substr[]){
         {
             string_length -= substr_length;
 
-            for (size_t j = i; j < string_length; j++)
+            for (int j = i; j < string_length; j++)
             {
                 string[j] = string[j + substr_length];
             }
@@ -53,10 +53,6 @@ void deleteFromString(char string[], char substr[]){
     }
     string[i] = '\0';
 }
-
-void manageOrganizations(int client_fd, organization* organizations, int size);
-void manageEngineers(int client_fd, engineer* engineers, int size);
-void manageChallenges(int client_fd, challenge* challenge_list, int size);
 
 int closeFunction() { return -1; }
 
@@ -197,9 +193,8 @@ void send_engineer_menu(int client_fd, char *email) {
 // ONG handling function
 // presents the menu options for an ONG and calls the functions responsible for the option selected by the user
 void send_organization_menu(int client_fd, char *email) {
-    char buffer[BUF_SIZE], name[200];
+    char buffer[BUF_SIZE];
     int choice;
-    size_t nread;
     
     // sends menu
     char* menu = "========================================================\n"
@@ -207,13 +202,10 @@ void send_organization_menu(int client_fd, char *email) {
                 "========================================================"
                 "\nPlease select an option:\n"
                 "1. Add a new challenge\n"
-                "2. List challenges\n"
-                "3. Update challenge\n"
-                "4. Delete challenge\n"
-                "5. View applications\n"
-                "6. Logout\n"
-                "7. Delete account\n"
-                "Enter your option (1-7): ";
+                "2. List and operate on challenges\n"
+                "3. Logout\n"
+                "4. Delete account\n"
+                "Enter your option (1-4): ";
     
     organization* org;
     challenge* c;
@@ -227,17 +219,27 @@ void send_organization_menu(int client_fd, char *email) {
     do // stays here until logout, after every operation comes back to this menu
     {
         writeStr(client_fd, menu);
-        choice = getSelectedOptionInRange(client_fd, 1, 7);
+        choice = getSelectedOptionInRange(client_fd, 1, 4);
 
         switch (choice) {
             case 1: // add a new challenge
                 addChallengePrompt(client_fd, org);
                 break;
-            case 2: // list all challenges belonging to this ONG   
+            case 2: // list all challenges belonging to this ONG, one at a time and ask the user to choose what to do next (view next challenge or operate on the current one)
+                char* option_prompt = "\nPlease select one of the options below\n"
+                    "1. Update challenge\n"
+                    "2. View applicants\n"
+                    "3. Delete challenge\n"
+                    "4. Next challenge\n"
+                    "5. Previous menu\n"
+                    "Your choice(1-5): ";
+
                 sprintf(buffer,"where organization_id='%d'",org->organizationId);
                 n = get_all_challenges(&c, buffer);
                 count = 0;
+                int chal_choice, goback=0;
                 challenge* currentChall = c;
+
                 while(count < n){
 
                     currentChall = c + count;
@@ -261,44 +263,61 @@ void send_organization_menu(int client_fd, char *email) {
                         case 2: writeStr(client_fd, "\n\nStatus: Rejected\n"); break;
                     }
 
+                    writeStr(client_fd, option_prompt);
+                    chal_choice = getSelectedOptionInRange(client_fd, 1, 5);
+
+                    switch(chal_choice){
+                        case 1: 
+                            orgChallengeUpdate(client_fd, &currentChall);
+                            update_challenge(currentChall);
+                            break;
+                        case 2: 
+                            int app_again;
+                            do
+                            {
+                                
+                                manageApplications(client_fd, &currentChall);
+                                writeStr(client_fd, "Do you want to see the list from the top (1) or go back to the start menu (2)? Your choice: ");
+                                app_again = getSelectedOptionInt(client_fd);
+                                if (app_again!=1)
+                                {
+                                    app_again=0;
+                                }
+                                
+                            } while (app_again);
+
+                            break;
+                        case 3: 
+                            remove_challenge(currentChall->id);
+                            break;
+                        case 5: goback=1; break;
+
+                    }
+                    if (goback)
+                    {
+                        break;
+                    }
+                    
                     count++;
-            
+                    
+                    if(count == n){
+                        writeStr(client_fd, "Do you want to see the list from the top (1) or go back to the start menu (2)? Your choice: ");
+                        chal_choice = getSelectedOptionInt(client_fd);
+                        if(chal_choice == 1){
+                            count = 0;
+                        }
+                        else break;
+                    }
                 }
 
                 break;
-            case 3: // update a challenge
-                // asks user for the wanted challenge
-                writeStr(client_fd, "Challenge Name: ");
-                nread = read(client_fd, name, 200 - 1);
-                name[nread-2] = 0;
-                
-                // gets from the db the specific challenge
-                sprintf(buffer,"WHERE name='%s' AND organization_id='%d'",name, org->organizationId);
-                printf("\n\ncond: %s\n\n",buffer);
-                get_all_challenges(&c, buffer);
-
-                orgChallengeUpdate(client_fd,&c);
-
-                update_challenge(c);
-                break;
-            case 4: // remove a challenge
-                writeStr(client_fd, "Challenge name: ");
-                nread = read(client_fd, name, 200 - 1);
-                name[nread-2] = 0;
-                sprintf(buffer,"WHERE name='%s' AND organization_id='%d'",name,org->organizationId);
-                get_all_challenges(&c, buffer);
-                remove_challenge(c->id);
-                break;
-            case 5: // view and accept applicants
-                writeStr(client_fd, "not yet implemented");
-                break;
-            case 6: // logout
+            case 3: // logout
                 // guarantee that the db table is updated to mirror a logout
                 a->status=0;
                 update_active(a);
                 close(client_fd);
                 break;
-            case 7: // delete account
+            case 4: // delete account
                 remove_actives(email);
                 sprintf(buffer,"where organization_id='%d'",org->organizationId);
                 n = get_all_challenges(&c, buffer);
@@ -318,7 +337,7 @@ void send_organization_menu(int client_fd, char *email) {
                 break;
                 
         }
-    } while (choice!=6 && choice!=7); // repeats unless the user logged out or deleted account
+    } while (choice!=4 && choice!=5); // repeats unless the user logged out or deleted account
     
     
 }
@@ -492,7 +511,6 @@ void manageOrganizations(int client_fd, organization* organizations, int size){
 
     organization* currentOrg = organizations;
     char buffer[1024];
-    int nread;
     int choice;
     int count = 0;
 
@@ -559,9 +577,7 @@ void manageOrganizations(int client_fd, organization* organizations, int size){
         // at the end of the ONG list, aks the admin if he wants to see the list again or go back to the previous menu
         if (count == size) {
             writeStr(client_fd, "Do you want to see the list from the top (1) or go back to the start menu (other)? Your choice: ");
-            nread = read(client_fd, buffer, BUF_SIZE-1);
-            buffer[nread-2] = '\0';
-            choice = atoi(buffer);
+            choice = getSelectedOptionInt(client_fd);
             if(choice == 1){
                 count = 0;
             }
@@ -578,7 +594,6 @@ void manageEngineers(int client_fd, engineer* engineers, int size){
 
     engineer* currentEng = engineers;
     char buffer[1024];
-    int nread;
     int choice;
     int count = 0;
 
@@ -646,10 +661,8 @@ void manageEngineers(int client_fd, engineer* engineers, int size){
         count++;
 
         if(count == size){
-            writeStr(client_fd, "Do you want to see the list from the top (1) or go back to the start menu (2)? Your choice: ");
-            nread = read(client_fd, buffer, BUF_SIZE-1);
-            buffer[nread-2] = '\0';
-            choice = atoi(buffer);
+            writeStr(client_fd, "Do you want to see the list from the top (1) or go back to the start menu (other)? Your choice: ");
+            choice = getSelectedOptionInt(client_fd);
             if(choice == 1){
                 count = 0;
             }
@@ -666,7 +679,6 @@ void manageChallenges(int client_fd, challenge* challenge_list, int size){
     
     challenge* currentChall = challenge_list;
     char buffer[1024];
-    int nread;
     int choice;
     int count = 0;
 
@@ -716,10 +728,8 @@ void manageChallenges(int client_fd, challenge* challenge_list, int size){
         count++;
 
         if(count == size){
-            writeStr(client_fd, "Do you want to see the list from the top (1) or go back to the start menu (2)? Your choice: ");
-            nread = read(client_fd, buffer, BUF_SIZE-1);
-            buffer[nread-2] = '\0';
-            choice = atoi(buffer);
+            writeStr(client_fd, "Do you want to see the list from the top (1) or go back to the start menu (other)? Your choice: ");
+            choice = getSelectedOptionInt(client_fd);
             if(choice == 1){
                 count = 0;
             }
@@ -730,10 +740,10 @@ void manageChallenges(int client_fd, challenge* challenge_list, int size){
 }
 
 // function that allows engineers to visualize the challenges available and apply to them
+///////////////////prevent duplicate applications
 void applyChallenges(int client_fd, challenge* challenge_list, int size, engineer** eng){
     challenge* currentChall = challenge_list;
     char buffer[1024], auxStr[600];
-    int nread;
     int choice;
     int count = 0;
 
@@ -794,10 +804,8 @@ void applyChallenges(int client_fd, challenge* challenge_list, int size, enginee
         count++;
 
         if(count == size){
-            writeStr(client_fd, "Do you want to see the list from the top (1) or go back to the start menu (2)? Your choice: ");
-            nread = read(client_fd, buffer, BUF_SIZE-1);
-            buffer[nread-2] = '\0';
-            choice = atoi(buffer);
+            writeStr(client_fd, "Do you want to see the list from the top (1) or go back to the start menu (other)? Your choice: ");
+            choice = getSelectedOptionInt(client_fd);
             if(choice == 1){
                 count = 0;
             }
@@ -1025,4 +1033,156 @@ void viewApplicationStatus(int client_fd, engineer** eng){
     {
         update_engineer((*eng));
     } 
+}
+
+
+void manageApplications(int client_fd, challenge **c){
+
+    char* option_prompt = "\nPlease select one of the options below\n"
+                          "1. Change the status to pending\n"
+                          "2. Change the status to approved\n"
+                          "3. Change the status to rejected\n"
+                          "4. Next applicant\n"
+                          //"5. Previous menu\n"
+                          "Your choice(1-4): ";
+
+    char app[600], *indiviEng, auxStr[20], *auxPnt;
+    int eng_ID, status, eng_nr=0, changes=0, choice, new_status, index;
+    strcpy(app,(*c)->applicants);
+    engineer *e;
+
+
+    indiviEng = strtok(app,":");
+    while (indiviEng != NULL) // for every engineer in the applicant list of the given challenge
+    {
+        eng_nr++;
+        eng_ID=atoi(indiviEng);
+        sprintf(auxStr,"where id=%d",eng_ID);
+        get_all_engineers(&e,auxStr);
+        
+        // prints the engineer info
+        writeStr(client_fd, "\nName: ");
+        writeStr(client_fd, e->name);
+        writeStr(client_fd, "\nOE Number: ");
+        sprintf(auxStr, "%d", e->number);
+        writeStr(client_fd, auxStr);
+        writeStr(client_fd, "\nEngineering Specialty: ");
+        writeStr(client_fd, e->engineeringSpecialty);
+        writeStr(client_fd, "\nStudent Status: ");
+        if(e->studentStatus){
+            writeStr(client_fd, "Studying");
+        }
+        else writeStr(client_fd, "Not studying");
+        writeStr(client_fd, "\nAreas of Expertise: ");
+        writeStr(client_fd, e->areasOfExpertise);
+        writeStr(client_fd, "\nEmail: ");
+        writeStr(client_fd, e->email);
+        writeStr(client_fd, "\nPhone Number: ");
+        writeStr(client_fd, e->phoneNumber);
+
+        // finds and prints the status of its application
+        indiviEng = strtok(NULL, ",");
+        status=atoi(indiviEng);
+        indiviEng = strtok (NULL, ":");
+        switch (status)
+        {
+        case 0: // pending
+            writeStr(client_fd,"\nStatus: Pending\n\n");
+            break;
+        case 1: // accepted
+            writeStr(client_fd,"\nStatus: Approved\n\n");
+            break;
+        default:
+            break;
+        }
+
+        // prompts the user for the new approval status
+        writeStr(client_fd, option_prompt);
+        choice = getSelectedOptionInRange(client_fd, 1, 4);
+
+        switch(choice){
+
+            case 1: new_status = 0; break; // pending
+            case 2: new_status = 1; break; // accepted
+            case 3: new_status = 2; break; // rejected
+            //case 5: break;
+        }
+
+        // and now updates the applicants list for the challenge and the challenges applied to list for the engineer
+
+        // changes on the applicants list
+        switch (new_status)
+        {
+        case 0: // pending
+        case 1: // accepted
+            if (new_status!=status)
+            {   
+                // find index of the engID:status on the applicant list
+                sprintf(auxStr,"%d:%d",eng_ID,status);
+                auxPnt = strstr((*c)->applicants,auxStr);
+                index = auxPnt - (*c)->applicants; // this index corresponds to the first char of engID:status on the applicant list
+                // go to the status index
+                index=index+strlen(auxStr)-1; // example 452:0 at index 4. has size 5. if the 4 is at index 4 then 0 is at index 8. index(4) + size(5) -1 = stat_index(8)
+                // replace
+                ((*c)->applicants)[index] = new_status+48;
+                if (!changes)
+                {
+                    changes=1;
+                }
+            }
+            break;
+        case 2: // rejected
+            // since when the status of an applicant is changed to rejected is application is immediately removed from the list
+            // it will never happen that the old status is rejected
+            if (!changes)
+            {
+                changes=1;
+            }
+            
+            // verification of the position of the applicants to be removed in the applicant list to format correctly the substring to be removed
+            if (indiviEng == NULL) // if it is the last piece of the string
+            {
+                if (eng_nr==1) // and also the first one -> no commas to worry about
+                {
+                    sprintf(auxStr,"%d:%d",eng_ID,status);
+                    deleteFromString((*c)->applicants,auxStr);
+                }else{ // not the first -> have to remove the comma that is behind
+                    sprintf(auxStr,",%d:%d",eng_ID,status);
+                    deleteFromString((*c)->applicants,auxStr);
+                }
+            }else{ // if it is somewhere in the middle -> remove the comma that is in front
+                sprintf(auxStr,"%d:%d,",eng_ID,status);
+                deleteFromString((*c)->applicants,auxStr);
+            }
+            break;
+        default:
+            break;
+        }
+    
+        // changes on the challenges list for the engineer
+        if (new_status!=status) // only has to change on the engineers if there was a change on the status
+        {
+            // find index of the cahlID:status on the challenges list
+            sprintf(auxStr,"%d:%d",(*c)->id,status);
+            auxPnt = strstr(e->chal,auxStr);
+            index = auxPnt - e->chal; // this index corresponds to the first char of engID:status on the applicant list
+            // go to the status index
+            index=index+strlen(auxStr)-1; // example 452:0 at index 4. has size 5. if the 4 is at index 4 then 0 is at index 8. index(4) + size(5) -1 = stat_index(8)
+            // replace
+            (e->chal)[index] = new_status+48;
+            if (!changes)
+            {
+                changes=1;
+            }
+            update_engineer(e);
+        }
+        
+    }
+
+    // updates the applicant list on the challenge only if there were changes made
+    if (changes)
+    {
+        update_challenge((*c));
+    } 
+
 }

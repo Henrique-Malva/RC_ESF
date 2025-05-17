@@ -25,6 +25,10 @@ void writeStr(int client_fd, char* str);
 
 void deleteFromString(char string[], char substr[]);
 
+void manageOrganizations(int client_fd, organization* organizations, int size);
+void manageEngineers(int client_fd, engineer* engineers, int size);
+void manageChallenges(int client_fd, challenge* challenge_list, int size);
+
 void process_client(int client_fd);
 void error(char* msg);
 int authenticate_user(int client_fd, char *email);
@@ -37,7 +41,7 @@ void applyChallenges(int client_fd, challenge* challenge_list, int size, enginee
 void orgChallengeUpdate(int client_fd, challenge** challenge);
 void engProfileUpdate(int client_fd, engineer** eng);
 void viewApplicationStatus(int client_fd, engineer** eng);
-
+void manageApplications(int client_fd, challenge **c);
 
 
 #endif
