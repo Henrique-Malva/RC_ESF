@@ -52,7 +52,7 @@ void process_client(int client_fd) {
 
     char email[100];
     int user_role;
-    do{
+    do{ // stays here until a correct option is selected
         
         writeStr(client_fd, menu0);
         choice = getSelectedOptionInRange(client_fd, 1, 4);
@@ -120,42 +120,55 @@ void send_engineer_menu(int client_fd, char *email) {
                     "2. Apply for a challenge\n"
                     "3. Update profile\n"
                     "4. Logout\n"
-                    "Enter your option (1-4): ";
+                    "5. Delete account"
+                    "Enter your option (1-5): ";
 
     engineer* eng;
     sprintf(buffer,"where email='%s'",email);
-    get_all_engineers(&eng, buffer);
+    get_all_engineers(&eng, buffer); // gets the eng that has the given email, to have access to everything related to it
+    active* a;
+    get_all_actives(&a,buffer);
+    challenge* c; int n;
 
-    do
+    do // stays here until logout, after every operation comes back to this menu
     {
         write(client_fd, menu, strlen(menu));
-        choice = getSelectedOptionInRange(client_fd, 1, 4);
+        choice = getSelectedOptionInRange(client_fd, 1, 5);
 
         // add notification section or application results section something like that (F9)
         switch (choice) {
             case 1: // visualize challenges
-                challenge* c; int n;
+            
                 n = get_all_challenges(&c, "");
-                applyChallenges(client_fd, c, n);
+                applyChallenges(client_fd, c, n, &eng);
                 break;
             case 2: // apply for challenges (combine with previous?)
-                write(client_fd, "not yet implemented", strlen("not yet implemented"));
+                
+                n = get_all_challenges(&c, "");
+                applyChallenges(client_fd, c, n, &eng);
+
                 break;
             case 3: // update profile
-                // ask for engineer shiz
-
+                engProfileUpdate(client_fd, &eng);
                 update_engineer(eng);
+                strcpy(email,eng->email);
                 break;
-            default: // logout
-                active* a;
-                sprintf(buffer,"where email='%s'",email);
-                get_all_actives(&a,buffer);
+            case 4: // logout
+                // guarantee that the db table is updated to mirror a logout
                 a->status=0;
                 update_active(a);
                 close(client_fd);
                 break;
+            case 5: // delete account
+                remove_actives(email);
+                remove_engineer(email);
+                close(client_fd);
+                break;
+            default:
+                // no need for default since getSelectedOptionInRange is blocking until the option is in the correct range
+                break;
         }
-    } while (choice!=4);
+    } while (choice!=4 && choice!=5); // repeats unless the user logged out or deleted account
     
     
 }
@@ -178,17 +191,22 @@ void send_organization_menu(int client_fd, char *email) {
                 "4. Delete challenge\n"
                 "5. View applications\n"
                 "6. Logout\n"
-                "Enter your option (1-6): ";
+                "7. Delete account\n"
+                "Enter your option (1-7): ";
     
     organization* org;
     challenge* c;
     sprintf(buffer,"where email='%s'",email);
-    get_all_organizations(&org, buffer);
+    get_all_organizations(&org, buffer); // gets the org that has the given email, to have access to everything related to it
+    active* a;
+    get_all_actives(&a,buffer);
 
-    do
+    int n,count;
+
+    do // stays here until logout, after every operation comes back to this menu
     {
         writeStr(client_fd, menu);
-        choice = getSelectedOptionInRange(client_fd, 1, 6);
+        choice = getSelectedOptionInRange(client_fd, 1, 7);
 
         switch (choice) {
             case 1: // add a new challenge
@@ -196,13 +214,14 @@ void send_organization_menu(int client_fd, char *email) {
                 break;
             case 2: // list all challenges belonging to this ONG   
                 sprintf(buffer,"where organization_id='%d'",org->organizationId);
-                int n = get_all_challenges(&c, buffer);
-                int count = 0;
+                n = get_all_challenges(&c, buffer);
+                count = 0;
                 challenge* currentChall = c;
                 while(count < n){
 
                     currentChall = c + count;
-            
+                    
+                    // print challenge info
                     writeStr(client_fd, "\nName: ");
                     writeStr(client_fd, currentChall->name);
                     writeStr(client_fd, "\nDescription: ");
@@ -226,11 +245,13 @@ void send_organization_menu(int client_fd, char *email) {
                 }
 
                 break;
-            case 3: // update a challenge 
+            case 3: // update a challenge
+                // asks user for the wanted challenge
                 writeStr(client_fd, "Challenge Name: ");
                 nread = read(client_fd, name, 200 - 1);
                 name[nread-2] = 0;
                 
+                // gets from the db the specific challenge
                 sprintf(buffer,"WHERE name='%s' AND organization_id='%d'",name, org->organizationId);
                 printf("\n\ncond: %s\n\n",buffer);
                 get_all_challenges(&c, buffer);
@@ -238,9 +259,6 @@ void send_organization_menu(int client_fd, char *email) {
                 orgChallengeUpdate(client_fd,&c);
 
                 update_challenge(c);
-
-                //remove_challenge(getSelectedOptionInt(client_fd));
-                //addChallengePrompt(client_fd, org);
                 break;
             case 4: // remove a challenge
                 writeStr(client_fd, "Challenge name: ");
@@ -253,16 +271,33 @@ void send_organization_menu(int client_fd, char *email) {
             case 5: // view and accept applicants
                 writeStr(client_fd, "not yet implemented");
                 break;
-            default: // logout
-                active* a;
-                sprintf(buffer,"where email='%s'",email);
-                get_all_actives(&a,buffer);
+            case 6: // logout
+                // guarantee that the db table is updated to mirror a logout
                 a->status=0;
                 update_active(a);
                 close(client_fd);
                 break;
+            case 7: // delete account
+                remove_actives(email);
+                sprintf(buffer,"where organization_id='%d'",org->organizationId);
+                n = get_all_challenges(&c, buffer);
+                count = 0;
+                challenge* curChall = c;
+                while (count<n)
+                {
+                    curChall = c + count;
+                    remove_challenge(curChall->id);
+                    count++;
+                }
+                
+                remove_organization(email);
+
+                close(client_fd);
+            default: 
+                break;
+                
         }
-    } while (choice!=6);
+    } while (choice!=6 && choice!=7); // repeats unless the user logged out or deleted account
     
     
 }
@@ -285,7 +320,7 @@ void send_admin_menu(int client_fd, char* email) {
                 "Enter your option (1-4): ";
      
 
-    do{
+    do{ // stays here until logout, after every operation comes back to this menu
         write(client_fd, menu0, strlen(menu0));
         state = getSelectedOptionInRange(client_fd, 1, 4);  
 
@@ -304,7 +339,7 @@ void send_admin_menu(int client_fd, char* email) {
                 manageOrganizations(client_fd, o, n);
                 break;
 
-            case 3: // manage challenges(?)
+            case 3: // manage challenges
 
                 challenge* c;
                 n = get_all_challenges(&c, "");
@@ -313,6 +348,7 @@ void send_admin_menu(int client_fd, char* email) {
                 break;
 
             case 4: // logout
+                // guarantee that the db table is updated to mirror a logout
                 active* a;
                 sprintf(buffer,"where email='%s'",email);
                 get_all_actives(&a,buffer);
@@ -465,7 +501,7 @@ void manageOrganizations(int client_fd, organization* organizations, int size){
         writeStr(client_fd, "\nAddress: ");
         writeStr(client_fd, currentOrg->address);
         writeStr(client_fd, "\nActivity Description: ");
-        //writeStr(client_fd, currentOrg->activityDescription); // not working
+        writeStr(client_fd, currentOrg->activityDescription);
         writeStr(client_fd, "\nPhone Number: ");
         writeStr(client_fd, currentOrg->phoneNumber);
 
@@ -488,8 +524,8 @@ void manageOrganizations(int client_fd, organization* organizations, int size){
                     add_actives("date",currentOrg->email,currentOrg->password,1,0); 
                 }
                 break; // change registration status to approved
-            case 2: currentOrg->status = 1; remove_actives(currentOrg->email); break; // change registration status to pending
-            case 3: currentOrg->status = 2; remove_actives(currentOrg->email); break; // change registration status to rejected
+            case 2: currentOrg->status = 1; remove_actives(currentOrg->email); break; // change registration status to pending and removes from accepted clients
+            case 3: currentOrg->status = 2; remove_actives(currentOrg->email); break; // change registration status to rejected and removes from accepted clients
             case 4: remove_actives(currentOrg->email); remove_organization(currentOrg->email); break; // delete organization
             case 6: return; // previous menu
             default: break; // next org
@@ -606,7 +642,7 @@ void manageEngineers(int client_fd, engineer* engineers, int size){
 
 
 // funtion for challenge managment for use by the admin
-// works in the same way of the manageChallenges
+// works in the same way of the manageOrganizations, except there is no manipulation of the clients table
 void manageChallenges(int client_fd, challenge* challenge_list, int size){
     
     challenge* currentChall = challenge_list;
@@ -675,9 +711,9 @@ void manageChallenges(int client_fd, challenge* challenge_list, int size){
 }
 
 
-void applyChallenges(int client_fd, challenge* challenge_list, int size){
+void applyChallenges(int client_fd, challenge* challenge_list, int size, engineer** eng){
     challenge* currentChall = challenge_list;
-    char buffer[1024];
+    char buffer[1024], auxStr[600];
     int nread;
     int choice;
     int count = 0;
@@ -701,20 +737,48 @@ void applyChallenges(int client_fd, challenge* challenge_list, int size){
         writeStr(client_fd, "\nHours: ");
         sprintf(buffer, "%d", currentChall->hours);
         writeStr(client_fd, buffer);
-        writeStr(client_fd, "\nOrganization ID: ");
-        sprintf(buffer, "%d", currentChall->organizationId);
-        writeStr(client_fd, buffer);
+        //writeStr(client_fd, "\nOrganization ID: ");
+        //sprintf(buffer, "%d", currentChall->organizationId);
+        //writeStr(client_fd, buffer);
 
         writeStr(client_fd, option_prompt);
         choice = getSelectedOptionInRange(client_fd, 1, 3);
 
         switch(choice){
 
-            case 1: /*stuffies*/ break;
+            case 1: /*stuffies*/
+                printf("\nstart\n");
+                printf("curChalApp: %s\n",currentChall->applicants);
+                if (strcmp(currentChall->applicants,"")==0)
+                {
+                    sprintf(auxStr,"%d:0",(*eng)->id);
+                }else{
+                    sprintf(auxStr,"%s,%d:0",currentChall->applicants,(*eng)->id);
+                }
+                printf("auxStr: %s\n",auxStr);
+                
+                strcpy(currentChall->applicants,auxStr);
+                printf("curChalApp after copy: %s\n",currentChall->applicants);
+                update_challenge(currentChall);
+                printf("eng name: %s\n",(*eng)->name);
+                if (strcmp((*eng)->chal,"")==0)
+                {
+                    sprintf(auxStr,"%d:0",currentChall->id);
+                }else{
+                    sprintf(auxStr,"%s,%d:0",(*eng)->chal,currentChall->id);
+                }
+                
+                printf("auxStr: %s\n",auxStr);
+                strcpy((*eng)->chal,auxStr);
+                printf("engChal after copy: %s\n",(*eng)->chal);
+                update_engineer((*eng));
+
+                break;
             case 3: return;
 
         }
 
+        count++;
 
         if(count == size){
             writeStr(client_fd, "Do you want to see the list from the top (1) or go back to the start menu (2)? Your choice: ");
@@ -731,43 +795,44 @@ void applyChallenges(int client_fd, challenge* challenge_list, int size){
 }
 
 
-void orgChallengeUpdate(int client_fd, challenge** challenge){
+void orgChallengeUpdate(int client_fd, challenge** chall){
     char* chUpPrompt = "\n1: Name\n2: Description\n3: Engineer Type\n4: Hours\nOther: None\n"
                     "\nSelect field to update: ";
     int choice, nread;
     uint8_t leave=0;
     char buffer[BUF_SIZE];
-    do
+    do // stays here until the user is satisfied with the updated fields
     {
         writeStr(client_fd, chUpPrompt);
         choice = getSelectedOptionInt(client_fd);
 
-        switch (choice)
+        switch (choice) // after prompting the user for the field to be updates, asks for the new information and modifies the challenge
+        // only after returning from this function is the database updated
         {
         case 1:
             writeStr(client_fd, "\nChallenge Name: ");
             nread = read(client_fd, buffer, BUF_SIZE-1);
             buffer[nread-2] = '\0';
-            strcpy((*challenge)->name,buffer);
+            strcpy((*chall)->name,buffer);
 
             break;
         case 2:
             writeStr(client_fd, "\nChallenge Description: ");
             nread = read(client_fd, buffer, BUF_SIZE-1);
             buffer[nread-2] = '\0';
-            strcpy((*challenge)->description,buffer);
+            strcpy((*chall)->description,buffer);
             break;
         case 3:
             writeStr(client_fd, "\nEngineer Type: ");
             nread = read(client_fd, buffer, BUF_SIZE-1);
             buffer[nread-2] = '\0';
-            strcpy((*challenge)->engineerType,buffer);
+            strcpy((*chall)->engineerType,buffer);
             break;
         case 4:
             writeStr(client_fd, "\nChallenge Hours: ");
             nread = read(client_fd, buffer, BUF_SIZE-1);
             buffer[nread-2] = '\0';
-            (*challenge)->hours=atoi(buffer);
+            (*chall)->hours=atoi(buffer);
             break;
         
         default:
@@ -777,4 +842,99 @@ void orgChallengeUpdate(int client_fd, challenge** challenge){
 
     } while (leave==0);    
 
+}
+
+void engProfileUpdate(int client_fd, engineer** eng){
+    char* chUpPrompt = "\n1: Name\n2: Email\n3: Specialty\n4: Institution\n5: Areas Of Expertise\n6: Phone\n7: Password\n8: Student Status\nOther: None\n"
+                    "\nSelect field to update: ";
+    int choice, nread, check=0;
+    uint8_t leave=0;
+    char buffer[BUF_SIZE], cond[BUF_SIZE];
+    engineer* engs;
+    active* act;
+    sprintf(cond,"where email='%s'",(*eng)->email);
+    get_all_actives(&act,cond);
+
+    do // stays here until the user is satisfied with the updated fields
+    {
+        writeStr(client_fd, chUpPrompt);
+        choice = getSelectedOptionInt(client_fd);
+
+        switch (choice) // after prompting the user for the field to be updates, asks for the new information and modifies the challenge
+        // only after returning from this function is the database updated
+        {
+        case 1:
+            writeStr(client_fd, "\nName: ");
+            nread = read(client_fd, buffer, 100-1);
+            buffer[nread-2] = '\0';
+
+            strcpy((*eng)->name,buffer);
+
+            break;
+        case 2:
+            do
+            {
+                if (check)
+                {
+                    write(client_fd, "This email is already in use\n\n", strlen("This email is already in use\n\n"));
+                }
+                check=1;
+
+                writeStr(client_fd, "\nEmail: ");
+                nread = read(client_fd, buffer, 100 - 1);
+                buffer[nread - 2] = '\0';
+
+                sprintf(cond,"where email='%s'", buffer);
+            } while (get_all_engineers(&engs,cond));
+            check=0;
+            strcpy(act->email,buffer);
+            strcpy((*eng)->email,buffer);
+            break;
+        case 3:
+            writeStr(client_fd, "\nSpeciality: ");
+            nread = read(client_fd, buffer, BUF_SIZE-1);
+            buffer[nread-2] = '\0';
+            strcpy((*eng)->engineeringSpecialty,buffer);
+            break;
+        case 4:
+            writeStr(client_fd, "\nInstitution of employment: ");
+            nread = read(client_fd, buffer, BUF_SIZE-1);
+            buffer[nread-2] = '\0';
+            strcpy((*eng)->employmentInstitution,buffer);
+            break;
+        case 5:
+            writeStr(client_fd, "\nAreas of expertise: ");
+            nread = read(client_fd, buffer, BUF_SIZE-1);
+            buffer[nread-2] = '\0';
+            strcpy((*eng)->areasOfExpertise,buffer);
+            break;
+        case 6:
+            writeStr(client_fd, "\nPhone: ");
+            nread = read(client_fd, buffer, BUF_SIZE-1);
+            buffer[nread-2] = '\0';
+            strcpy((*eng)->phoneNumber,buffer);
+            break;
+        case 7:
+            writeStr(client_fd, "\nPassword: ");
+            nread = read(client_fd, buffer, BUF_SIZE-1);
+            buffer[nread-2] = '\0';
+            strcpy((*eng)->password,buffer);
+            strcpy(act->password,buffer);
+            break;
+
+        case 8:
+            writeStr(client_fd, "\nStudent Status: ");
+            nread = read(client_fd, buffer, BUF_SIZE-1);
+            buffer[nread-2] = '\0';
+            (*eng)->studentStatus=atoi(buffer);
+            break;
+        
+        default:
+            leave=1;
+            break;
+        }
+
+    } while (leave==0);
+    // updates the active client referent to the logged in engineer   
+    update_active(act);
 }

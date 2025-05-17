@@ -23,6 +23,7 @@ int select_callback_challenges(void *data, int argc, char **argv, char **azColNa
     e->hours = argv[4] ? atoi(argv[4]) : 0;
     e->organizationId = argv[5] ? atoi(argv[5]) : 0;
     e->status = argv[6] ? atoi(argv[6]) : 0;
+    e->applicants = argv[7] ? strdup(argv[7]) : NULL;
 
     cbData->index++;
     return 0;
@@ -37,7 +38,7 @@ static int callback_challenges(void *NotUsed, int argc, char **argv, char **azCo
     return 0;
  }
 
-int add_challenge(char* name, char* description, char* type, int hours, int organization_id, bool status) {
+int add_challenge(char* name, char* description, char* type, int hours, int organization_id, bool status, char* app) {
     sqlite3* db;
     char sql[512];
     char* err = 0;
@@ -51,8 +52,8 @@ int add_challenge(char* name, char* description, char* type, int hours, int orga
     }
 
     /* Create SQL statement */
-    sprintf(sql, "INSERT INTO challenges (name,description,type,hours,organization_id,status) VALUES ('%s','%s','%s',%d,%d,%d); ",
-        name, description, type, hours, organization_id, status);
+    sprintf(sql, "INSERT INTO challenges (name,description,type,hours,organization_id,status,applicants) VALUES ('%s','%s','%s',%d,%d,%d,'%s'); ",
+        name, description, type, hours, organization_id, status, app);
 
     /* Execute SQL statement */    
     if(sqlite3_exec(db, sql, callback_challenges, 0, &err) != SQLITE_OK){
@@ -82,8 +83,8 @@ int update_challenge(challenge* challenges) {
     }
 
     /* Create merged SQL statement */
-    sprintf(sql, "UPDATE challenges SET name='%s',description='%s',type='%s',hours='%d',organization_id='%d',status='%d' WHERE id='%d'; ",
-        challenges->name, challenges->description, challenges->engineerType, challenges->hours, challenges->organizationId, challenges->status, challenges->id);
+    sprintf(sql, "UPDATE challenges SET name='%s',description='%s',type='%s',hours='%d',organization_id='%d',status='%d',applicants='%s' WHERE id='%d'; ",
+        challenges->name, challenges->description, challenges->engineerType, challenges->hours, challenges->organizationId, challenges->status, challenges->applicants, challenges->id);
 
     /* Execute SQL statement */
     if(sqlite3_exec(db, sql, callback_challenges, 0, &err) != SQLITE_OK){
@@ -167,7 +168,10 @@ void addChallengePrompt(int client_fd, organization * org){
     char description[BUF_SIZE];
     char engineerType[BUF_SIZE];
     char hours[BUF_SIZE];
+    char app[6*MAX_CHALLENGES]; // max id length is 3 + 2 for approval status and separation from status and id, max 100 engineer = 500 chars + 99 commas separating each engineer id + \0 = 600
     int nread;
+
+    strcpy(app,"");
     
     char* challenge_prompt = "You're now registering a new challenge please insert:\n"
                              "Challenge name: ";
@@ -193,6 +197,6 @@ void addChallengePrompt(int client_fd, organization * org){
     
     int h = atoi(hours);
 
-    add_challenge(name, description, engineerType, h, org->organizationId, 0);
+    add_challenge(name, description, engineerType, h, org->organizationId, 0, app);
 
 }

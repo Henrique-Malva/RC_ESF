@@ -27,6 +27,7 @@ int select_callback_engineers(void *data, int argc, char **argv, char **azColNam
     e->phoneNumber = argv[8] ? strdup(argv[8]) : NULL;
     e->password = argv[9] ? strdup(argv[9]) : NULL;
     e->status = argv[10] ? atoi(argv[10]) : 0;
+    e->password = argv[11] ? strdup(argv[11]) : NULL;
 
     cbData->index++;
     return 0;
@@ -39,9 +40,10 @@ int callback_engineers(void *NotUsed, int argc, char **argv, char **azColName) {
     }
     printf("\n");
     return 0;
- }
+}
 
-int add_engineer(char* name, int number, char* specialty, char* institution, bool student, char* areas_of_expertise, char* email, char* phone, char* password, int status) {
+// adds an engineer to the database with the information passed as arguments
+int add_engineer(char* name, int number, char* specialty, char* institution, bool student, char* areas_of_expertise, char* email, char* phone, char* password, int status, char* chal) {
     sqlite3* db;
     char sql[512];
     char* err = 0;
@@ -55,8 +57,8 @@ int add_engineer(char* name, int number, char* specialty, char* institution, boo
     }
 
     /* Create SQL statement */
-    sprintf(sql, "INSERT INTO engineers (name,number,specialty,institution,student,areas_of_expertise,email,phone,password,status) VALUES ('%s',%d,'%s','%s',%d,'%s','%s','%s','%s', %d); ",
-        name, number, specialty, institution, student, areas_of_expertise, email, phone, password, status);
+    sprintf(sql, "INSERT INTO engineers (name,number,specialty,institution,student,areas_of_expertise,email,phone,password,status,challenges) VALUES ('%s',%d,'%s','%s',%d,'%s','%s','%s','%s',%d,'%s'); ",
+        name, number, specialty, institution, student, areas_of_expertise, email, phone, password, status, chal);
 
     /* Execute SQL statement */    
     if(sqlite3_exec(db, sql, callback_engineers, 0, &err) != SQLITE_OK){
@@ -72,6 +74,7 @@ int add_engineer(char* name, int number, char* specialty, char* institution, boo
     return 1;
 }
 
+// updates the info on the database about the engineer passed as argument
 int update_engineer(engineer* engineers) {
     sqlite3* db;
     char sql[512];
@@ -86,8 +89,8 @@ int update_engineer(engineer* engineers) {
     }
 
     /* Create merged SQL statement */
-    sprintf(sql, "UPDATE engineers SET name='%s',number='%d',specialty='%s',institution='%s',student='%d',areas_of_expertise='%s',email='%s',phone='%s',password='%s',status='%d' WHERE id='%d'; ",
-        engineers->name, engineers->number, engineers->engineeringSpecialty, engineers->employmentInstitution, engineers->studentStatus, engineers->areasOfExpertise, engineers->email, engineers->phoneNumber, engineers->password, engineers->status, engineers->id);
+    sprintf(sql, "UPDATE engineers SET name='%s',number='%d',specialty='%s',institution='%s',student='%d',areas_of_expertise='%s',email='%s',phone='%s',password='%s',status='%d',challenges='%s' WHERE id='%d'; ",
+        engineers->name, engineers->number, engineers->engineeringSpecialty, engineers->employmentInstitution, engineers->studentStatus, engineers->areasOfExpertise, engineers->email, engineers->phoneNumber, engineers->password, engineers->status, engineers->chal, engineers->id);
 
     /* Execute SQL statement */
     if(sqlite3_exec(db, sql, callback_engineers, 0, &err) != SQLITE_OK){
@@ -102,6 +105,7 @@ int update_engineer(engineer* engineers) {
     return 1; 
 }
 
+// removes the engineer with the email passed in the first argument from the database
 int remove_engineer(char* email) {
     sqlite3* db;
     char sql[512];
@@ -131,6 +135,8 @@ int remove_engineer(char* email) {
     return 1; 
 }
 
+// get_all as in get_all that satisfy the SQL query condition in the second argument
+// if condition is empty it gets all of them and stores them into dynamic memory, returning the pointer to that memory address in the 1st argument
 int get_all_engineers(engineer** engineers, char* condition) { 
     sqlite3* db;
     char sql[512];
@@ -165,22 +171,29 @@ int get_all_engineers(engineer** engineers, char* condition) {
     return cbData.index;
 }
 
+// function used to register engineers, asks for all of the necessary information
+// verifies the correctedness of the given information and avoides duplicates where they can't exist
+// and calls the add function
 void engineerRegister(int client_fd) {
 	int oeNumber;
-    int nread;
     int studentStatus;
-    int check=0;
     char fullName[100], specialty[50], institution[100];
     char areasOfExpertise[200], email[100], phone[20], pass[20];
+    char chal[6*MAX_ENGINEERS]; // max id length is 3 + 2 for approval status and separation from status and id, max 100 challenges = 500 chars + 99(100-1) commas separating each challenge id + \0 = 600
+
     char buf[10], buffer[BUF_SIZE];
     engineer* eng; 
 
+    int check=0, nread;
+
+    strcpy(chal,"");
+    
     // Get engineer's details
     write(client_fd, "Enter your full name: ", strlen("Enter your full name: "));
     nread = read(client_fd, fullName, 100 - 1);
     fullName[nread - 2] = '\0';
 
-    do
+    do // OE number can't have duplicates
     {
         if (check)
         {
@@ -217,7 +230,7 @@ void engineerRegister(int client_fd) {
     nread = read(client_fd, areasOfExpertise, 200 - 1);
     areasOfExpertise[nread - 2] = '\0';
 
-    do
+    do // email can't be duplicate
     {
         if (check)
         {
@@ -233,11 +246,11 @@ void engineerRegister(int client_fd) {
     } while (get_all_engineers(&eng,buffer));
     check=0;
 
-    write(client_fd, " Enter your mobile phone number (optional): ", strlen(" Enter your mobile phone number (optional): "));
+    write(client_fd, "Enter your mobile phone number (optional): ", strlen(" Enter your mobile phone number (optional): "));
     nread = read(client_fd, phone, 20 - 1);
     phone[nread - 2] = '\0';
 
     write(client_fd, "\nRegistration successful!\n", strlen("\nRegistration successful!\n"));
     
-    add_engineer(fullName,oeNumber,specialty,institution,studentStatus,areasOfExpertise,email,phone,pass,1);
+    add_engineer(fullName,oeNumber,specialty,institution,studentStatus,areasOfExpertise,email,phone,pass,1,chal);
 }

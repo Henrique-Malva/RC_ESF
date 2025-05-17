@@ -36,7 +36,8 @@ typedef struct engineer {
     char* email;
     char* phoneNumber;
     char* password;
-    int status;
+    int status; // registration status
+    char* chal; // challenges applied to
 } engineer;
 
 // End of Engineer struct declaration
@@ -53,6 +54,7 @@ typedef struct challenge {
     int hours;
     int organizationId;
     int status;
+    char* applicants;
 } challenge;
 
 // Ending of challenge declaration
