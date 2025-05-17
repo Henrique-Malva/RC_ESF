@@ -29,6 +29,31 @@ void writeStr(int client_fd, char* str){
     write(client_fd, str, strlen(str));
 }
 
+// function that deletes a substring from a string
+// necessary to remove applicants from challenges and challenges applied to from engineers, from the respective lists (that are strings) in the structure
+// credits to Portfolio Courses' at https://www.youtube.com/watch?v=p6uqGop26es&t=342s
+void deleteFromString(char string[], char substr[]){
+    int i=0;
+    int string_length = strlen(string);
+    int substr_length = strlen(substr);
+
+    while (i < string_length)
+    {
+        if (strstr(&string[i], substr) == &string[i])
+        {
+            string_length -= substr_length;
+
+            for (size_t j = i; j < string_length; j++)
+            {
+                string[j] = string[j + substr_length];
+            }
+            
+        }
+        else i++;
+    }
+    string[i] = '\0';
+}
+
 void manageOrganizations(int client_fd, organization* organizations, int size);
 void manageEngineers(int client_fd, engineer* engineers, int size);
 void manageChallenges(int client_fd, challenge* challenge_list, int size);
@@ -116,11 +141,11 @@ void send_engineer_menu(int client_fd, char *email) {
                 "                 Welcome Engineer!\n"
                 "========================================================"
                 "\nPlease select an option:\n"
-                    "1. View available challenges\n"
-                    "2. Apply for a challenge\n"
+                    "1. View and apply to challenges\n"
+                    "2. View application status\n"
                     "3. Update profile\n"
                     "4. Logout\n"
-                    "5. Delete account"
+                    "5. Delete account\n"
                     "Enter your option (1-5): ";
 
     engineer* eng;
@@ -137,16 +162,12 @@ void send_engineer_menu(int client_fd, char *email) {
 
         // add notification section or application results section something like that (F9)
         switch (choice) {
-            case 1: // visualize challenges
-            
+            case 1: // visualize and apply to challenges
                 n = get_all_challenges(&c, "");
                 applyChallenges(client_fd, c, n, &eng);
                 break;
-            case 2: // apply for challenges (combine with previous?)
-                
-                n = get_all_challenges(&c, "");
-                applyChallenges(client_fd, c, n, &eng);
-
+            case 2: // view status of each application
+                viewApplicationStatus(client_fd, &eng);
                 break;
             case 3: // update profile
                 engProfileUpdate(client_fd, &eng);
@@ -551,7 +572,6 @@ void manageOrganizations(int client_fd, organization* organizations, int size){
 
 }
 
-
 // funtion for engineer managment for use by the admin
 // works in the same way of the manageOrganizations
 void manageEngineers(int client_fd, engineer* engineers, int size){
@@ -640,7 +660,6 @@ void manageEngineers(int client_fd, engineer* engineers, int size){
 
 }
 
-
 // funtion for challenge managment for use by the admin
 // works in the same way of the manageOrganizations, except there is no manipulation of the clients table
 void manageChallenges(int client_fd, challenge* challenge_list, int size){
@@ -710,7 +729,7 @@ void manageChallenges(int client_fd, challenge* challenge_list, int size){
     }
 }
 
-
+// function that allows engineers to visualize the challenges available and apply to them
 void applyChallenges(int client_fd, challenge* challenge_list, int size, engineer** eng){
     challenge* currentChall = challenge_list;
     char buffer[1024], auxStr[600];
@@ -737,40 +756,34 @@ void applyChallenges(int client_fd, challenge* challenge_list, int size, enginee
         writeStr(client_fd, "\nHours: ");
         sprintf(buffer, "%d", currentChall->hours);
         writeStr(client_fd, buffer);
-        //writeStr(client_fd, "\nOrganization ID: ");
-        //sprintf(buffer, "%d", currentChall->organizationId);
-        //writeStr(client_fd, buffer);
-
+        
         writeStr(client_fd, option_prompt);
         choice = getSelectedOptionInRange(client_fd, 1, 3);
 
         switch(choice){
 
-            case 1: /*stuffies*/
-                printf("\nstart\n");
-                printf("curChalApp: %s\n",currentChall->applicants);
-                if (strcmp(currentChall->applicants,"")==0)
+            case 1: 
+                // formatting of the applicants string for the challenges
+                if (strcmp(currentChall->applicants,"")==0) 
                 {
                     sprintf(auxStr,"%d:0",(*eng)->id);
                 }else{
                     sprintf(auxStr,"%s,%d:0",currentChall->applicants,(*eng)->id);
                 }
-                printf("auxStr: %s\n",auxStr);
-                
+
+                // copies to the challenge struct and updates the db table
                 strcpy(currentChall->applicants,auxStr);
-                printf("curChalApp after copy: %s\n",currentChall->applicants);
                 update_challenge(currentChall);
-                printf("eng name: %s\n",(*eng)->name);
+
+                // formatting of the challenges string for the engineers
                 if (strcmp((*eng)->chal,"")==0)
                 {
                     sprintf(auxStr,"%d:0",currentChall->id);
                 }else{
                     sprintf(auxStr,"%s,%d:0",(*eng)->chal,currentChall->id);
                 }
-                
-                printf("auxStr: %s\n",auxStr);
+                // copies to the engineer struct and updates the db table
                 strcpy((*eng)->chal,auxStr);
-                printf("engChal after copy: %s\n",(*eng)->chal);
                 update_engineer((*eng));
 
                 break;
@@ -794,7 +807,8 @@ void applyChallenges(int client_fd, challenge* challenge_list, int size, enginee
     }
 }
 
-
+// function to allow a user-friendly way of updating challenges for organizations
+// instead of having to retype every field, the user chooses the field to update and is prompted to do so until satisfied
 void orgChallengeUpdate(int client_fd, challenge** chall){
     char* chUpPrompt = "\n1: Name\n2: Description\n3: Engineer Type\n4: Hours\nOther: None\n"
                     "\nSelect field to update: ";
@@ -844,6 +858,8 @@ void orgChallengeUpdate(int client_fd, challenge** chall){
 
 }
 
+// function to allow a user-friendly way of updating the profile for engineers)
+// instead of having to retype every field, the user chooses the field to update and is prompted to do so until satisfied
 void engProfileUpdate(int client_fd, engineer** eng){
     char* chUpPrompt = "\n1: Name\n2: Email\n3: Specialty\n4: Institution\n5: Areas Of Expertise\n6: Phone\n7: Password\n8: Student Status\nOther: None\n"
                     "\nSelect field to update: ";
@@ -937,4 +953,76 @@ void engProfileUpdate(int client_fd, engineer** eng){
     } while (leave==0);
     // updates the active client referent to the logged in engineer   
     update_active(act);
+}
+
+// funtion to allow the engineer to know the status of his application in the challenges he applied to
+void viewApplicationStatus(int client_fd, engineer** eng){
+    char chals[600], *indiviChal, auxStr[20];
+    int chal_ID, status, chal_nr=0, removals=0;
+    strcpy(chals,(*eng)->chal);
+    challenge *c;
+
+
+    indiviChal = strtok(chals,":");
+    while (indiviChal != NULL)
+    {
+        chal_nr++;
+        chal_ID=atoi(indiviChal);
+        sprintf(auxStr,"where id=%d",chal_ID);
+        get_all_challenges(&c,auxStr);
+        
+        writeStr(client_fd, "\nChallenge Name: ");
+        writeStr(client_fd, c->name);
+        writeStr(client_fd, "\nDescription: ");
+        writeStr(client_fd, c->description);
+        writeStr(client_fd, "\nEngineer Type: ");
+        writeStr(client_fd, c->engineerType);
+        writeStr(client_fd, "\nHours: ");
+        sprintf(auxStr, "%d", c->hours);
+        writeStr(client_fd, auxStr);
+
+        indiviChal = strtok(NULL, ",");
+        status=atoi(indiviChal);
+        indiviChal = strtok (NULL, ":");
+        switch (status)
+        {
+        case 0: // pending
+            writeStr(client_fd,"\nStatus: Pending\n\n");
+            break;
+        case 1: // accepted
+            writeStr(client_fd,"\nStatus: Approved\n\n");
+            break;
+        case 2: // rejected
+            writeStr(client_fd,"\nStatus: Rejected\n\n");
+            if (!removals)
+            {
+                removals=1;
+            }
+
+            // verification of the position of the challenge to be removed in the challenge list to format correctly the substring to be removed
+            if (indiviChal == NULL) // if it is the last piece of the string
+            {
+                if (chal_nr==1) // and also the first one -> no commas to worry about
+                {
+                    sprintf(auxStr,"%d:%d",chal_ID,status);
+                    deleteFromString((*eng)->chal,auxStr);
+                }else{ // not the first -> have to remove the comma that is behind
+                    sprintf(auxStr,",%d:%d",chal_ID,status);
+                    deleteFromString((*eng)->chal,auxStr);
+                }
+            }else{ // if it is somewhere in the middle -> remove the comma that is in front
+                sprintf(auxStr,"%d:%d,",chal_ID,status);
+                deleteFromString((*eng)->chal,auxStr);
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    // updates the challenge list on the engineer only if there were removals
+    if (removals)
+    {
+        update_engineer((*eng));
+    } 
 }

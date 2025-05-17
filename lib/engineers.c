@@ -27,7 +27,7 @@ int select_callback_engineers(void *data, int argc, char **argv, char **azColNam
     e->phoneNumber = argv[8] ? strdup(argv[8]) : NULL;
     e->password = argv[9] ? strdup(argv[9]) : NULL;
     e->status = argv[10] ? atoi(argv[10]) : 0;
-    e->password = argv[11] ? strdup(argv[11]) : NULL;
+    e->chal = argv[11] ? strdup(argv[11]) : NULL;
 
     cbData->index++;
     return 0;
