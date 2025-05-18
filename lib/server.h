@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <netdb.h>
 #include <string.h>
+#include <time.h>
 
 #include "structs.h"
 #include "engineers.h"

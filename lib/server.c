@@ -409,6 +409,13 @@ int authenticate_user(int client_fd, char *email) {
     sprintf(email_cond,"where email='%s'",email);
     active* actives;
 
+    // obtaining current date
+    time_t now;
+    struct tm *info_time;
+
+    time(&now);
+    info_time = localtime(&now);
+
     // first it will check the table of users with accepted registration
     if (get_all_actives(&actives, email_cond)) {
         // if the email is correct, asks for password
@@ -441,7 +448,9 @@ int authenticate_user(int client_fd, char *email) {
             }else{
                 // if it isn't, updates the status and the last_login
                 actives->status=1;
-                strcpy(actives->last_login,"date");
+                // format the date
+                sprintf(buffer,"%02d/%02d/%04d", info_time->tm_mday, info_time->tm_mon + 1, info_time->tm_year + 1900);
+                strcpy(actives->last_login,buffer);
                 update_active(actives);
 
                 return actives->role;
@@ -562,6 +571,7 @@ void manageOrganizations(int client_fd, organization* organizations, int size){
                 if (currentOrg->status != 0) // prevents adding to clients table if it's an already accepted registration
                 {
                     currentOrg->status = 0; 
+                    // no login ever, date is just date
                     add_actives("date",currentOrg->email,currentOrg->password,1,0); 
                 }
                 break; // change registration status to approved
@@ -722,7 +732,7 @@ void applyChallenges(int client_fd, challenge* challenge_list, int size, enginee
                           "2. Next challenge\n"
                           "3. Previous menu\n"
                           "Your choice(1-3): ";
-    if (size==0)
+    if (size==0) // problem: if there are only pending challenges
     {
         writeStr(client_fd,"\nThere are no challenges at the moment\n");
     }
@@ -731,50 +741,55 @@ void applyChallenges(int client_fd, challenge* challenge_list, int size, enginee
 
         currentChall = challenge_list + count;
 
-        printChal(client_fd,currentChall,0);
+        if (currentChall->status==0) // if the challenge is accepted by the admin
+        {
+            printChal(client_fd,currentChall,0);
         
-        writeStr(client_fd, option_prompt);
-        choice = getSelectedOptionInRange(client_fd, 1, 3);
+            writeStr(client_fd, option_prompt);
+            choice = getSelectedOptionInRange(client_fd, 1, 3);
 
-        switch(choice){
+            switch(choice){
 
-            case 1: 
-                // first searches the challenges applied to list to make sure the engineer hasn't already applied to this challenge
-                sprintf(auxStr,"%d:",currentChall->id);
-                chal = strstr((*eng)->chal,auxStr); // if the result is null it means this challenge is still not apply to by this engineer
+                case 1: 
+                    // first searches the challenges applied to list to make sure the engineer hasn't already applied to this challenge
+                    sprintf(auxStr,"%d:",currentChall->id);
+                    chal = strstr((*eng)->chal,auxStr); // if the result is null it means this challenge is still not apply to by this engineer
 
-                if (chal==NULL)
-                {
-                    // formatting of the applicants string for the challenges
-                    if (strcmp(currentChall->applicants,"")==0) 
+                    if (chal==NULL)
                     {
-                        sprintf(auxStr,"%d:0",(*eng)->id);
+                        // formatting of the applicants string for the challenges
+                        if (strcmp(currentChall->applicants,"")==0) 
+                        {
+                            sprintf(auxStr,"%d:0",(*eng)->id);
+                        }else{
+                            sprintf(auxStr,"%s,%d:0",currentChall->applicants,(*eng)->id);
+                        }
+
+                        // copies to the challenge struct and updates the db table
+                        strcpy(currentChall->applicants,auxStr);
+                        update_challenge(currentChall);
+
+                        // formatting of the challenges string for the engineers
+                        if (strcmp((*eng)->chal,"")==0)
+                        {
+                            sprintf(auxStr,"%d:0",currentChall->id);
+                        }else{
+                            sprintf(auxStr,"%s,%d:0",(*eng)->chal,currentChall->id);
+                        }
+                        // copies to the engineer struct and updates the db table
+                        strcpy((*eng)->chal,auxStr);
+                        update_engineer((*eng));
                     }else{
-                        sprintf(auxStr,"%s,%d:0",currentChall->applicants,(*eng)->id);
+                        writeStr(client_fd,"\nAlready applied to this challenge\n");
                     }
+                    
 
-                    // copies to the challenge struct and updates the db table
-                    strcpy(currentChall->applicants,auxStr);
-                    update_challenge(currentChall);
+                    break;
+                case 3: return;
 
-                    // formatting of the challenges string for the engineers
-                    if (strcmp((*eng)->chal,"")==0)
-                    {
-                        sprintf(auxStr,"%d:0",currentChall->id);
-                    }else{
-                        sprintf(auxStr,"%s,%d:0",(*eng)->chal,currentChall->id);
-                    }
-                    // copies to the engineer struct and updates the db table
-                    strcpy((*eng)->chal,auxStr);
-                    update_engineer((*eng));
-                }else{
-                    writeStr(client_fd,"\nAlready applied to this challenge\n");
-                }
-                
+            }
 
-                break;
-            case 3: return;
-
+            
         }
 
         count++;

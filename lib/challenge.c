@@ -197,7 +197,7 @@ void addChallengePrompt(int client_fd, organization * org){
     
     int h = atoi(hours);
 
-    add_challenge(name, description, engineerType, h, org->organizationId, 0, app);
+    add_challenge(name, description, engineerType, h, org->organizationId, 1, app);
 
 }
 
