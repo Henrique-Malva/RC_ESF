@@ -129,7 +129,6 @@ int remove_organization(char* email) {
     return 1;
 }
 
-
 int get_all_organizations(organization** organizations, char* condition) {
     sqlite3* db;
     char sql[512];
@@ -171,7 +170,7 @@ void organizationRegister(int client_fd) {
     int nread, check=0, taxID;
 
     // Get organization details
-    write(client_fd, "Enter the organization name: ", strlen("Enter the organization name: "));
+    write(client_fd, "\nEnter the organization name: ", strlen("\nEnter the organization name: "));
     nread = read(client_fd, orgName, 100 - 1);
     orgName[nread - 2] = '\0';
 
@@ -185,7 +184,7 @@ void organizationRegister(int client_fd) {
     {
         if (check)
         {
-            write(client_fd, "This tax identification number is already in use\n\n", strlen("This tax identification number is already in use\n\n"));
+            write(client_fd, "\nThis tax identification number is already in use\n\n", strlen("\nThis tax identification number is already in use\n\n"));
         }
         check=1;
         
@@ -202,7 +201,7 @@ void organizationRegister(int client_fd) {
     {
         if (check)
         {
-            write(client_fd,"This email is already in use\n\n",strlen("This email is already in use\n\n"));
+            write(client_fd,"\nThis email is already in use\n\n",strlen("\nThis email is already in use\n\n"));
         }
         check=1;
 
@@ -233,4 +232,27 @@ void organizationRegister(int client_fd) {
     
     add_organization(orgName,taxID,email,address,description,phone,pass,1);
     
+}
+
+void printOrg(int client_fd, organization* org) {
+    char buffer[BUF_SIZE];
+    write(client_fd, "\nOrganization name: ", 20);
+    write(client_fd, org->name, strlen(org->name));
+    write(client_fd, "\nTax Identification Number: ",28);
+    snprintf(buffer, 10, "%d", org->taxIdentificationNumber);
+    write(client_fd, buffer, strlen(buffer));
+    write(client_fd, "\nEmail: ",8);
+    write(client_fd, org->email, strlen(org->email));
+    write(client_fd, "\nAddress: ",10);
+    write(client_fd, org->address, strlen(org->address));
+    write(client_fd, "\nActivity Description: ",23);
+    write(client_fd, org->activityDescription, strlen(org->activityDescription));
+    write(client_fd, "\nPhone Number: ",15);
+    write(client_fd, org->phoneNumber, strlen(org->phoneNumber));
+
+    switch (org->status){
+        case 0: write(client_fd, "\n\nStatus: Approved",18); break;
+        case 1: write(client_fd, "\n\nStatus: Pending",17); break;
+        case 2: write(client_fd, "\n\nStatus: Rejected",18); break;
+    }
 }

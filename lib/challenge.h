@@ -11,5 +11,6 @@ int remove_challenge(int id);
 
 int get_all_challenges(challenge** challenges, char* condition);
 void addChallengePrompt(int client_fd, organization * org);
+void printChal(int client_fd, challenge* c, int adm);
 
 #endif

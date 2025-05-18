@@ -11,5 +11,6 @@ int remove_engineer(char* email);
 
 int get_all_engineers(engineer** engineers, char* condition);
 void engineerRegister(int client_fd);
+void printEng(int client_fd, engineer* e, int adm);
 
 #endif

@@ -254,3 +254,37 @@ void engineerRegister(int client_fd) {
     
     add_engineer(fullName,oeNumber,specialty,institution,studentStatus,areasOfExpertise,email,phone,pass,1,chal);
 }
+
+void printEng(int client_fd, engineer* e, int adm){
+    char buffer[BUF_SIZE];
+
+    write(client_fd, "\nEngineer name: ", 16);
+    write(client_fd, e->name,strlen(e->name));
+    write(client_fd, "\nOE Number: ",12);
+    sprintf(buffer, "%d", e->number);
+    write(client_fd, buffer,strlen(buffer));
+    write(client_fd, "\nEngineering Specialty: ",24);
+    write(client_fd, e->engineeringSpecialty,strlen(e->engineeringSpecialty));
+    write(client_fd, "\nStudent Status: ",17);
+    if(e->studentStatus){
+        write(client_fd, "Studying",8);
+    }
+    else write(client_fd, "Not studying",12);
+    write(client_fd, "\nAreas of Expertise: ",21);
+    write(client_fd, e->areasOfExpertise,strlen(e->areasOfExpertise));
+    write(client_fd, "\nEmail: ",8);
+    write(client_fd, e->email,strlen(e->email));
+    write(client_fd, "\nPhone Number: ",15);
+    write(client_fd, e->phoneNumber,strlen(e->phoneNumber));
+
+    if (adm)
+    {
+        switch (e->status){
+            case 0: write(client_fd, "\n\nStatus: Approved",18); break;
+            case 1: write(client_fd, "\n\nStatus: Pending",17); break;
+            case 2: write(client_fd, "\n\nStatus: Rejected",18); break;
+        }
+    }
+    
+
+}

@@ -200,3 +200,32 @@ void addChallengePrompt(int client_fd, organization * org){
     add_challenge(name, description, engineerType, h, org->organizationId, 0, app);
 
 }
+
+void printChal(int client_fd, challenge* c, int adm){
+    char buffer[BUF_SIZE];
+
+    write(client_fd, "\nChallenge name: ", 17);
+    write(client_fd, c->name, strlen(c->name));
+    write(client_fd, "\nDescription: ", 14);
+    write(client_fd, c->description, strlen(c->description));
+    write(client_fd, "\nEngineer Type: ", 16);
+    write(client_fd, c->engineerType, strlen(c->engineerType));
+    write(client_fd, "\nHours: ",8);
+    sprintf(buffer, "%d", c->hours);
+    write(client_fd, buffer, strlen(buffer));
+    
+
+    if (adm)
+    {
+        write(client_fd, "\nOrganization ID: ", 18);
+        sprintf(buffer, "%d", c->organizationId);
+        write(client_fd, buffer, strlen(buffer));
+
+        switch (c->status){
+            case 0: write(client_fd, "\n\nStatus: Approved", 18); break;
+            case 1: write(client_fd, "\n\nStatus: Pending", 17); break;
+            case 2: write(client_fd, "\n\nStatus: Rejected", 18); break;
+        }
+    }
+    
+}

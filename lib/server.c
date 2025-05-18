@@ -61,7 +61,7 @@ void process_client(int client_fd) {
     int choice = 0;
     char buffer[BUF_SIZE];
     // welcome menu
-    char* menu0 = "========================================================\n"
+    char* menu0="========================================================\n"
                 "        Welcome to engineers without borders!\n"
                 "========================================================"
                 "\nPlease select an option:\n"
@@ -103,7 +103,7 @@ void process_client(int client_fd) {
             break;
         case 2: // registration of non-profit org
             system("cls");  
-            writeStr(client_fd, "==================================================================\n"
+            writeStr(client_fd, "\n\n==================================================================\n"
                                 "                      NON-PROFIT REGISTRATION \n"
                                 "         PLEASE ENTER THE DATA OF YOUR NON-PROFIT ORGANIZATION \n"
                                 "==================================================================\n\n"
@@ -112,7 +112,7 @@ void process_client(int client_fd) {
             break;
         case 3: // registration of engineer
             system("cls");
-            writeStr(client_fd, "==================================================================\n"
+            writeStr(client_fd, "\n\n==================================================================\n"
                                 "                      VOLUNTEER REGISTRATION \n"
                                 "               PLEASE ENTER YOUR DATA AND CREDENTIALS \n"
                                 "==================================================================\n\n"
@@ -133,16 +133,16 @@ void send_engineer_menu(int client_fd, char *email) {
     char buffer[BUF_SIZE];
     
     // sends the menu
-    char* menu = "========================================================\n"
+    char* menu= "\n\n========================================================\n"
                 "                 Welcome Engineer!\n"
-                "========================================================"
-                "\nPlease select an option:\n"
-                    "1. View and apply to challenges\n"
-                    "2. View application status\n"
-                    "3. Update profile\n"
-                    "4. Logout\n"
-                    "5. Delete account\n"
-                    "Enter your option (1-5): ";
+                "========================================================\n"
+                "Please select an option:\n"
+                "1. View and apply to challenges\n"
+                "2. View application status\n"
+                "3. Update profile\n"
+                "4. Logout\n"
+                "5. Delete account\n"
+                "Enter your option (1-5): ";
 
     engineer* eng;
     sprintf(buffer,"where email='%s'",email);
@@ -197,10 +197,10 @@ void send_organization_menu(int client_fd, char *email) {
     int choice;
     
     // sends menu
-    char* menu = "========================================================\n"
+    char* menu= "\n\n========================================================\n"
                 "          Welcome Non-Profit Organization!\n"
-                "========================================================"
-                "\nPlease select an option:\n"
+                "========================================================\n"
+                "Please select an option:\n"
                 "1. Add a new challenge\n"
                 "2. List and operate on challenges\n"
                 "3. Logout\n"
@@ -226,7 +226,7 @@ void send_organization_menu(int client_fd, char *email) {
                 addChallengePrompt(client_fd, org);
                 break;
             case 2: // list all challenges belonging to this ONG, one at a time and ask the user to choose what to do next (view next challenge or operate on the current one)
-                char* option_prompt = "\nPlease select one of the options below\n"
+                char* option_prompt = "\n\nPlease select one of the options below\n"
                     "1. Update challenge\n"
                     "2. View applicants\n"
                     "3. Delete challenge\n"
@@ -240,28 +240,17 @@ void send_organization_menu(int client_fd, char *email) {
                 int chal_choice, goback=0;
                 challenge* currentChall = c;
 
+                if (n==0)
+                {
+                    writeStr(client_fd,"\nYou have no registered challenges\n");
+                }
+
                 while(count < n){
 
                     currentChall = c + count;
                     
                     // print challenge info
-                    writeStr(client_fd, "\nName: ");
-                    writeStr(client_fd, currentChall->name);
-                    writeStr(client_fd, "\nDescription: ");
-                    writeStr(client_fd, currentChall->description);
-                    writeStr(client_fd, "\nEngineer Type: ");
-                    writeStr(client_fd, currentChall->engineerType);
-                    writeStr(client_fd, "\nHours: ");
-                    sprintf(buffer, "%d", currentChall->hours);
-                    writeStr(client_fd, buffer);
-                    writeStr(client_fd, "\nOrganization ID: ");
-                    sprintf(buffer, "%d", currentChall->organizationId);
-                    writeStr(client_fd, buffer);
-                    switch (currentChall->status){
-                        case 0: writeStr(client_fd, "\n\nStatus: Approved\n"); break;
-                        case 1: writeStr(client_fd, "\n\nStatus: Pending\n"); break;
-                        case 2: writeStr(client_fd, "\n\nStatus: Rejected\n"); break;
-                    }
+                    printChal(client_fd, currentChall, 1);
 
                     writeStr(client_fd, option_prompt);
                     chal_choice = getSelectedOptionInRange(client_fd, 1, 5);
@@ -275,9 +264,8 @@ void send_organization_menu(int client_fd, char *email) {
                             int app_again;
                             do
                             {
-                                
                                 manageApplications(client_fd, &currentChall);
-                                writeStr(client_fd, "Do you want to see the list from the top (1) or go back to the start menu (2)? Your choice: ");
+                                writeStr(client_fd, "\nDo you want to see the APPLICATION list from the top (1) or go back to the previous menu (other)? Your choice: ");
                                 app_again = getSelectedOptionInt(client_fd);
                                 if (app_again!=1)
                                 {
@@ -301,7 +289,7 @@ void send_organization_menu(int client_fd, char *email) {
                     count++;
                     
                     if(count == n){
-                        writeStr(client_fd, "Do you want to see the list from the top (1) or go back to the start menu (2)? Your choice: ");
+                        writeStr(client_fd, "\nDo you want to see the CHALLENGE list from the top (1) or go back to the previous menu (other)? Your choice: ");
                         chal_choice = getSelectedOptionInt(client_fd);
                         if(chal_choice == 1){
                             count = 0;
@@ -349,10 +337,10 @@ void send_admin_menu(int client_fd, char* email) {
     char buffer[BUF_SIZE];
 
     // sends menu
-    char* menu0 = "========================================================"
+    char* menu0="\n\n========================================================\n"
                 "                       Welcome Admin!\n"
-                "========================================================"
-                "\nPlease select an option:\n"
+                "========================================================\n"
+                "Please select an option:\n"
                 "1. Manage engineers\n"
                 "2. Manage organizations\n"
                 "3. Manage challenges\n"
@@ -403,7 +391,7 @@ void send_admin_menu(int client_fd, char* email) {
 // user login function
 int authenticate_user(int client_fd, char *email) {
 
-    char* login_prompt = "\nEnter your login email: ";
+    char* login_prompt = "\n\nEnter your login email: ";
     char* password_prompt = "Enter your password: ";
     char* authentication_error_prompt = "User not registered\n";
     writeStr(client_fd, login_prompt);
@@ -434,7 +422,7 @@ int authenticate_user(int client_fd, char *email) {
 
             if (actives->status==1)
             {
-                writeStr(client_fd, "Client already logged in\n");
+                writeStr(client_fd, "\nClient already logged in\n");
                 return -1;
             }else{
                 // if it isn't, updates the status and the last_login
@@ -450,9 +438,9 @@ int authenticate_user(int client_fd, char *email) {
             if (actives->role!=2) // informs the user of incorrect password only if it isn't an admin
             // to prevent common users from finding out an admin login
             {
-                writeStr(client_fd, "Wrong password\n");
+                writeStr(client_fd, "\nWrong password\n");
             }else{
-                printf("Attempted admin login. Wrong password\n");
+                printf("\nAttempted admin login. Wrong password\n");
                 writeStr(client_fd, authentication_error_prompt);
             }
             
@@ -469,15 +457,15 @@ int authenticate_user(int client_fd, char *email) {
         if (strcmp(pass,eng->password) == 0)
         {
             if (eng->status == 1){ // status pending
-                writeStr(client_fd, "Registration pending\n");
+                writeStr(client_fd, "\nRegistration pending\n");
             }else { // status rejected
-                writeStr(client_fd, "Registration rejected. Please re-register or contact support\n");
+                writeStr(client_fd, "\nRegistration rejected. Please re-register or contact support\n");
                 remove_engineer(email);
             }
             return -1;
             
         }else{
-            writeStr(client_fd, "Wrong password\n");
+            writeStr(client_fd, "\nWrong password\n");
             return -1;
         }
     }else if(get_all_organizations(&org, email_cond)){
@@ -488,15 +476,15 @@ int authenticate_user(int client_fd, char *email) {
         if (strcmp(pass,org->password) == 0)
         {
             if (org->status == 1){ // status pending
-                writeStr(client_fd, "Registration pending\n");
+                writeStr(client_fd, "\nRegistration pending\n");
             }else { // status rejected
-                writeStr(client_fd, "Registration rejected. Please re-register or contact support\n");
+                writeStr(client_fd, "\nRegistration rejected. Please re-register or contact support\n");
                 remove_organization(email);
             }
 
             return -1;
         } else{
-            writeStr(client_fd, "Wrong password\n");
+            writeStr(client_fd, "\nWrong password\n");
             return -1;
         }
     }
@@ -523,6 +511,11 @@ void manageOrganizations(int client_fd, organization* organizations, int size){
                           "5. Next organization\n"
                           "6. Previous menu\n"
                           "Your choice(1-6): ";    
+    
+    if (size==0)
+    {
+        writeStr(client_fd,"\nThere are no organizations registered\n");
+    }
 
     // shows every organization in the database, one at a time and prompts the admin for the action to take
     while(count < size){
@@ -530,25 +523,7 @@ void manageOrganizations(int client_fd, organization* organizations, int size){
         currentOrg = organizations+count;
 
         // show ONG info in the screen
-        writeStr(client_fd, "\nName: ");
-        writeStr(client_fd, currentOrg->name);
-        writeStr(client_fd, "\nTax Identification Number: ");
-        snprintf(buffer, 10, "%d", currentOrg->taxIdentificationNumber);
-        writeStr(client_fd, buffer);
-        writeStr(client_fd, "\nEmail: ");
-        writeStr(client_fd, currentOrg->email);
-        writeStr(client_fd, "\nAddress: ");
-        writeStr(client_fd, currentOrg->address);
-        writeStr(client_fd, "\nActivity Description: ");
-        writeStr(client_fd, currentOrg->activityDescription);
-        writeStr(client_fd, "\nPhone Number: ");
-        writeStr(client_fd, currentOrg->phoneNumber);
-
-        switch (currentOrg->status){
-            case 0: writeStr(client_fd, "\n\nStatus: Approved"); break;
-            case 1: writeStr(client_fd, "\n\nStatus: Pending"); break;
-            case 2: writeStr(client_fd, "\n\nStatus: Rejected"); break;
-        }
+        printOrg(client_fd,currentOrg);
         
         // prompt admin for action
         write(client_fd, option_prompt, strlen(option_prompt));
@@ -576,7 +551,7 @@ void manageOrganizations(int client_fd, organization* organizations, int size){
 
         // at the end of the ONG list, aks the admin if he wants to see the list again or go back to the previous menu
         if (count == size) {
-            writeStr(client_fd, "Do you want to see the list from the top (1) or go back to the start menu (other)? Your choice: ");
+            writeStr(client_fd, "\nDo you want to see ORGANIZATION list from the top (1) or go back to the previous menu (other)? Your choice: ");
             choice = getSelectedOptionInt(client_fd);
             if(choice == 1){
                 count = 0;
@@ -598,7 +573,7 @@ void manageEngineers(int client_fd, engineer* engineers, int size){
     int count = 0;
 
     
-    char* option_prompt = "\nPlease select one of the options below\n"
+    char* option_prompt = "\n\nPlease select one of the options below\n"
                           "1. Change the status to approved\n"
                           "2. Change the status to pending\n"
                           "3. Change the status to rejected\n"
@@ -607,35 +582,16 @@ void manageEngineers(int client_fd, engineer* engineers, int size){
                           "6. Previous menu\n"
                           "Your choice(1-6): ";
 
-    
+    if (size==0)
+    {
+        writeStr(client_fd,"\nThere are no engineers registered\n");
+    }
+
     while(count < size){
 
         currentEng = engineers + count;
 
-        writeStr(client_fd, "\nName: ");
-        writeStr(client_fd, currentEng->name);
-        writeStr(client_fd, "\nOE Number: ");
-        sprintf(buffer, "%d", currentEng->number);
-        writeStr(client_fd, buffer);
-        writeStr(client_fd, "\nEngineering Specialty: ");
-        writeStr(client_fd, currentEng->engineeringSpecialty);
-        writeStr(client_fd, "\nStudent Status: ");
-        if(currentEng->studentStatus){
-            writeStr(client_fd, "Studying");
-        }
-        else writeStr(client_fd, "Not studying");
-        writeStr(client_fd, "\nAreas of Expertise: ");
-        writeStr(client_fd, currentEng->areasOfExpertise);
-        writeStr(client_fd, "\nEmail: ");
-        writeStr(client_fd, currentEng->email);
-        writeStr(client_fd, "\nPhone Number: ");
-        writeStr(client_fd, currentEng->phoneNumber);
-        
-        switch (currentEng->status){
-            case 0: writeStr(client_fd, "\n\nStatus: Approved"); break;
-            case 1: writeStr(client_fd, "\n\nStatus: Pending"); break;
-            case 2: writeStr(client_fd, "\n\nStatus: Rejected"); break;
-        }
+        printEng(client_fd,currentEng,1);
         
         writeStr(client_fd, option_prompt);
         choice = getSelectedOptionInRange(client_fd, 1, 6);
@@ -661,7 +617,7 @@ void manageEngineers(int client_fd, engineer* engineers, int size){
         count++;
 
         if(count == size){
-            writeStr(client_fd, "Do you want to see the list from the top (1) or go back to the start menu (other)? Your choice: ");
+            writeStr(client_fd, "\nDo you want to see the ENGINEER list from the top (1) or go back to the previous menu (other)? Your choice: ");
             choice = getSelectedOptionInt(client_fd);
             if(choice == 1){
                 count = 0;
@@ -682,7 +638,7 @@ void manageChallenges(int client_fd, challenge* challenge_list, int size){
     int choice;
     int count = 0;
 
-    char* option_prompt = "\nPlease select one of the options below\n"
+    char* option_prompt = "\n\nPlease select one of the options below\n"
                           "1. Change the status to approved\n"
                           "2. Change the status to pending\n"
                           "3. Change the status to rejected\n"
@@ -690,27 +646,16 @@ void manageChallenges(int client_fd, challenge* challenge_list, int size){
                           "5. Previous menu\n"
                           "Your choice(1-5): ";
 
+    if (size==0)
+    {
+        writeStr(client_fd,"\nThere are no challenges\n");
+    }
+
     while(count < size){
 
         currentChall = challenge_list + count;
 
-        writeStr(client_fd, "\nName: ");
-        writeStr(client_fd, currentChall->name);
-        writeStr(client_fd, "\nDescription: ");
-        writeStr(client_fd, currentChall->description);
-        writeStr(client_fd, "\nEngineer Type: ");
-        writeStr(client_fd, currentChall->engineerType);
-        writeStr(client_fd, "\nHours: ");
-        sprintf(buffer, "%d", currentChall->hours);
-        writeStr(client_fd, buffer);
-        writeStr(client_fd, "\nOrganization ID: ");
-        sprintf(buffer, "%d", currentChall->organizationId);
-        writeStr(client_fd, buffer);
-        switch (currentChall->status){
-            case 0: writeStr(client_fd, "\n\nStatus: Approved"); break;
-            case 1: writeStr(client_fd, "\n\nStatus: Pending"); break;
-            case 2: writeStr(client_fd, "\n\nStatus: Rejected"); break;
-        }
+        printChal(client_fd, currentChall, 1);
 
         writeStr(client_fd, option_prompt);
         choice = getSelectedOptionInRange(client_fd, 1, 5);
@@ -728,7 +673,7 @@ void manageChallenges(int client_fd, challenge* challenge_list, int size){
         count++;
 
         if(count == size){
-            writeStr(client_fd, "Do you want to see the list from the top (1) or go back to the start menu (other)? Your choice: ");
+            writeStr(client_fd, "\nDo you want to see the CHALLENGE list from the top (1) or go back to the previous menu (other)? Your choice: ");
             choice = getSelectedOptionInt(client_fd);
             if(choice == 1){
                 count = 0;
@@ -743,7 +688,7 @@ void manageChallenges(int client_fd, challenge* challenge_list, int size){
 ///////////////////prevent duplicate applications
 void applyChallenges(int client_fd, challenge* challenge_list, int size, engineer** eng){
     challenge* currentChall = challenge_list;
-    char buffer[1024], auxStr[600];
+    char buffer[1024], auxStr[600], *chal=NULL;
     int choice;
     int count = 0;
 
@@ -752,20 +697,16 @@ void applyChallenges(int client_fd, challenge* challenge_list, int size, enginee
                           "2. Next challenge\n"
                           "3. Previous menu\n"
                           "Your choice(1-3): ";
-
+    if (size==0)
+    {
+        writeStr(client_fd,"\nThere are no challenges at the moment\n");
+    }
+    
     while(count < size){
 
         currentChall = challenge_list + count;
 
-        writeStr(client_fd, "\nName: ");
-        writeStr(client_fd, currentChall->name);
-        writeStr(client_fd, "\nDescription: ");
-        writeStr(client_fd, currentChall->description);
-        writeStr(client_fd, "\nEngineer Type: ");
-        writeStr(client_fd, currentChall->engineerType);
-        writeStr(client_fd, "\nHours: ");
-        sprintf(buffer, "%d", currentChall->hours);
-        writeStr(client_fd, buffer);
+        printChal(client_fd,currentChall,0);
         
         writeStr(client_fd, option_prompt);
         choice = getSelectedOptionInRange(client_fd, 1, 3);
@@ -773,28 +714,38 @@ void applyChallenges(int client_fd, challenge* challenge_list, int size, enginee
         switch(choice){
 
             case 1: 
-                // formatting of the applicants string for the challenges
-                if (strcmp(currentChall->applicants,"")==0) 
-                {
-                    sprintf(auxStr,"%d:0",(*eng)->id);
-                }else{
-                    sprintf(auxStr,"%s,%d:0",currentChall->applicants,(*eng)->id);
-                }
+                // first searches the challenges applied to list to make sure the engineer hasn't already applied to this challenge
+                sprintf(auxStr,"%d:",currentChall->id);
+                chal = strstr((*eng)->chal,auxStr); // if the result is null it means this challenge is still not apply to by this engineer
 
-                // copies to the challenge struct and updates the db table
-                strcpy(currentChall->applicants,auxStr);
-                update_challenge(currentChall);
-
-                // formatting of the challenges string for the engineers
-                if (strcmp((*eng)->chal,"")==0)
+                if (chal==NULL)
                 {
-                    sprintf(auxStr,"%d:0",currentChall->id);
+                    // formatting of the applicants string for the challenges
+                    if (strcmp(currentChall->applicants,"")==0) 
+                    {
+                        sprintf(auxStr,"%d:0",(*eng)->id);
+                    }else{
+                        sprintf(auxStr,"%s,%d:0",currentChall->applicants,(*eng)->id);
+                    }
+
+                    // copies to the challenge struct and updates the db table
+                    strcpy(currentChall->applicants,auxStr);
+                    update_challenge(currentChall);
+
+                    // formatting of the challenges string for the engineers
+                    if (strcmp((*eng)->chal,"")==0)
+                    {
+                        sprintf(auxStr,"%d:0",currentChall->id);
+                    }else{
+                        sprintf(auxStr,"%s,%d:0",(*eng)->chal,currentChall->id);
+                    }
+                    // copies to the engineer struct and updates the db table
+                    strcpy((*eng)->chal,auxStr);
+                    update_engineer((*eng));
                 }else{
-                    sprintf(auxStr,"%s,%d:0",(*eng)->chal,currentChall->id);
+                    writeStr(client_fd,"\nAlready applied to this challenge\n");
                 }
-                // copies to the engineer struct and updates the db table
-                strcpy((*eng)->chal,auxStr);
-                update_engineer((*eng));
+                
 
                 break;
             case 3: return;
@@ -804,7 +755,7 @@ void applyChallenges(int client_fd, challenge* challenge_list, int size, enginee
         count++;
 
         if(count == size){
-            writeStr(client_fd, "Do you want to see the list from the top (1) or go back to the start menu (other)? Your choice: ");
+            writeStr(client_fd, "\nDo you want to see the CHALLENGE list from the top (1) or go back to the previous menu (other)? Your choice: ");
             choice = getSelectedOptionInt(client_fd);
             if(choice == 1){
                 count = 0;
@@ -818,7 +769,7 @@ void applyChallenges(int client_fd, challenge* challenge_list, int size, enginee
 // function to allow a user-friendly way of updating challenges for organizations
 // instead of having to retype every field, the user chooses the field to update and is prompted to do so until satisfied
 void orgChallengeUpdate(int client_fd, challenge** chall){
-    char* chUpPrompt = "\n1: Name\n2: Description\n3: Engineer Type\n4: Hours\nOther: None\n"
+    char* chUpPrompt = "\n\n1: Name\n2: Description\n3: Engineer Type\n4: Hours\nOther: None\n"
                     "\nSelect field to update: ";
     int choice, nread;
     uint8_t leave=0;
@@ -869,7 +820,7 @@ void orgChallengeUpdate(int client_fd, challenge** chall){
 // function to allow a user-friendly way of updating the profile for engineers)
 // instead of having to retype every field, the user chooses the field to update and is prompted to do so until satisfied
 void engProfileUpdate(int client_fd, engineer** eng){
-    char* chUpPrompt = "\n1: Name\n2: Email\n3: Specialty\n4: Institution\n5: Areas Of Expertise\n6: Phone\n7: Password\n8: Student Status\nOther: None\n"
+    char* chUpPrompt = "\n\n1: Name\n2: Email\n3: Specialty\n4: Institution\n5: Areas Of Expertise\n6: Phone\n7: Password\n8: Student Status\nOther: None\n"
                     "\nSelect field to update: ";
     int choice, nread, check=0;
     uint8_t leave=0;
@@ -900,7 +851,7 @@ void engProfileUpdate(int client_fd, engineer** eng){
             {
                 if (check)
                 {
-                    write(client_fd, "This email is already in use\n\n", strlen("This email is already in use\n\n"));
+                    writeStr(client_fd, "\nThis email is already in use\n\n");
                 }
                 check=1;
 
@@ -972,22 +923,20 @@ void viewApplicationStatus(int client_fd, engineer** eng){
 
 
     indiviChal = strtok(chals,":");
+
+    if (indiviChal==NULL)
+    {
+        writeStr(client_fd,"\nYou have not applied to any challenges\n");
+    }
+    
     while (indiviChal != NULL)
     {
         chal_nr++;
         chal_ID=atoi(indiviChal);
         sprintf(auxStr,"where id=%d",chal_ID);
         get_all_challenges(&c,auxStr);
-        
-        writeStr(client_fd, "\nChallenge Name: ");
-        writeStr(client_fd, c->name);
-        writeStr(client_fd, "\nDescription: ");
-        writeStr(client_fd, c->description);
-        writeStr(client_fd, "\nEngineer Type: ");
-        writeStr(client_fd, c->engineerType);
-        writeStr(client_fd, "\nHours: ");
-        sprintf(auxStr, "%d", c->hours);
-        writeStr(client_fd, auxStr);
+
+        printChal(client_fd,c,0);
 
         indiviChal = strtok(NULL, ",");
         status=atoi(indiviChal);
@@ -995,13 +944,13 @@ void viewApplicationStatus(int client_fd, engineer** eng){
         switch (status)
         {
         case 0: // pending
-            writeStr(client_fd,"\nStatus: Pending\n\n");
+            writeStr(client_fd,"\nApplication status: Pending\n\n");
             break;
         case 1: // accepted
-            writeStr(client_fd,"\nStatus: Approved\n\n");
+            writeStr(client_fd,"\nApplication status: Approved\n\n");
             break;
         case 2: // rejected
-            writeStr(client_fd,"\nStatus: Rejected\n\n");
+            writeStr(client_fd,"\nApplication status: Rejected\n\n");
             if (!removals)
             {
                 removals=1;
@@ -1035,10 +984,10 @@ void viewApplicationStatus(int client_fd, engineer** eng){
     } 
 }
 
-
+// funtion that allows organizations to visualize who applied to a given challenge, and to decide on each applications approval status
 void manageApplications(int client_fd, challenge **c){
 
-    char* option_prompt = "\nPlease select one of the options below\n"
+    char* option_prompt = "\n\nPlease select one of the options below\n"
                           "1. Change the status to pending\n"
                           "2. Change the status to approved\n"
                           "3. Change the status to rejected\n"
@@ -1053,32 +1002,22 @@ void manageApplications(int client_fd, challenge **c){
 
 
     indiviEng = strtok(app,":");
+
+    if (indiviEng==NULL)
+    {
+        writeStr(client_fd,"\nThere are no applicants for this challenge\n");
+    }
+
     while (indiviEng != NULL) // for every engineer in the applicant list of the given challenge
     {
         eng_nr++;
         eng_ID=atoi(indiviEng);
         sprintf(auxStr,"where id=%d",eng_ID);
         get_all_engineers(&e,auxStr);
-        
+
         // prints the engineer info
-        writeStr(client_fd, "\nName: ");
-        writeStr(client_fd, e->name);
-        writeStr(client_fd, "\nOE Number: ");
-        sprintf(auxStr, "%d", e->number);
-        writeStr(client_fd, auxStr);
-        writeStr(client_fd, "\nEngineering Specialty: ");
-        writeStr(client_fd, e->engineeringSpecialty);
-        writeStr(client_fd, "\nStudent Status: ");
-        if(e->studentStatus){
-            writeStr(client_fd, "Studying");
-        }
-        else writeStr(client_fd, "Not studying");
-        writeStr(client_fd, "\nAreas of Expertise: ");
-        writeStr(client_fd, e->areasOfExpertise);
-        writeStr(client_fd, "\nEmail: ");
-        writeStr(client_fd, e->email);
-        writeStr(client_fd, "\nPhone Number: ");
-        writeStr(client_fd, e->phoneNumber);
+        printEng(client_fd,e,0);
+        
 
         // finds and prints the status of its application
         indiviEng = strtok(NULL, ",");
@@ -1087,10 +1026,10 @@ void manageApplications(int client_fd, challenge **c){
         switch (status)
         {
         case 0: // pending
-            writeStr(client_fd,"\nStatus: Pending\n\n");
+            writeStr(client_fd,"\nApplication status: Pending\n\n");
             break;
         case 1: // accepted
-            writeStr(client_fd,"\nStatus: Approved\n\n");
+            writeStr(client_fd,"\nApplication status: Approved\n\n");
             break;
         default:
             break;
