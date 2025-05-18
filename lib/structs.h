@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <stdbool.h> 
 #include <string.h>
+#include <openssl/sha.h>
 
 #include "sqlite3.h"
 

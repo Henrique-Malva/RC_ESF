@@ -174,7 +174,7 @@ void addChallengePrompt(int client_fd, organization * org){
     strcpy(app,"");
     
     char* challenge_prompt = "You're now registering a new challenge please insert:\n"
-                             "Challenge name: ";
+                             "\nChallenge name: ";
 
     write(client_fd, challenge_prompt, strlen(challenge_prompt));
     nread = read(client_fd, name, BUF_SIZE-1);

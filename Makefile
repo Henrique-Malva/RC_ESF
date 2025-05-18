@@ -1,6 +1,6 @@
 ﻿# Compiler and flags
 CC := gcc
-CFLAGS := -Wall -Wextra -Ilib
+CFLAGS := -Wall -Wextra -Ilib -L/usr/lib 
 
 # Directories
 SRC_DIR := src
@@ -24,16 +24,16 @@ all: $(TARGET)
 # Linking the final executable
 $(TARGET): $(OBJ_FILES)
 	@mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ -lssl -lcrypto
 
 # Compile each .c to .o in the build directory
 $(BUILD_DIR)/%.o: $(LIB_DIR)/%.c
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@ -I $(INC_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -I $(INC_DIR) -lssl -lcrypto
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@ -I $(INC_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -I $(INC_DIR) -lssl -lcrypto
 
 # Clean rule
 clean:

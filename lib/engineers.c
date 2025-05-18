@@ -180,6 +180,8 @@ void engineerRegister(int client_fd) {
     char fullName[100], specialty[50], institution[100];
     char areasOfExpertise[200], email[100], phone[20], pass[20];
     char chal[6*MAX_ENGINEERS]; // max id length is 3 + 2 for approval status and separation from status and id, max 100 challenges = 500 chars + 99(100-1) commas separating each challenge id + \0 = 600
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    char hexstr[SHA256_DIGEST_LENGTH*2+1];
 
     char buf[10], buffer[BUF_SIZE];
     engineer* eng; 
@@ -212,6 +214,14 @@ void engineerRegister(int client_fd) {
     write(client_fd, "Enter a password: ", strlen("Enter a password: "));
     nread = read(client_fd, pass, 20 - 1);
     pass[nread - 2] = '\0';
+
+    SHA256((unsigned char*)pass, strlen(pass), hash);
+    // Convert binary hash to hex string
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        sprintf(hexstr + (i * 2), "%02x", hash[i]);
+    }
+    hexstr[SHA256_DIGEST_LENGTH * 2] = '\0';
+
 
     write(client_fd, "Enter your engineering specialty: ", strlen("Enter your engineering specialty: "));
     nread = read(client_fd, specialty, 50 - 1);
@@ -252,7 +262,7 @@ void engineerRegister(int client_fd) {
 
     write(client_fd, "\nRegistration successful!\n", strlen("\nRegistration successful!\n"));
     
-    add_engineer(fullName,oeNumber,specialty,institution,studentStatus,areasOfExpertise,email,phone,pass,1,chal);
+    add_engineer(fullName,oeNumber,specialty,institution,studentStatus,areasOfExpertise,email,phone,hexstr,1,chal);
 }
 
 void printEng(int client_fd, engineer* e, int adm){

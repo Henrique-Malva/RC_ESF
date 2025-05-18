@@ -59,9 +59,8 @@ int closeFunction() { return -1; }
 // main client handling function where the operation flow is handled
 void process_client(int client_fd) {
     int choice = 0;
-    char buffer[BUF_SIZE];
     // welcome menu
-    char* menu0="========================================================\n"
+    char* menu0="\n\n========================================================\n"
                 "        Welcome to engineers without borders!\n"
                 "========================================================"
                 "\nPlease select an option:\n"
@@ -403,6 +402,8 @@ int authenticate_user(int client_fd, char *email) {
     strcpy(email,buffer);
 
     char pass[200];
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    char hexstr[SHA256_DIGEST_LENGTH*2+1];
     engineer* eng;
     organization* org;
     sprintf(email_cond,"where email='%s'",email);
@@ -415,8 +416,21 @@ int authenticate_user(int client_fd, char *email) {
         nread = read(client_fd, pass, 200 - 1);
         pass[nread - 2] = '\0';
 
+        if (actives->role!=2)
+        {
+            SHA256((unsigned char*)pass, strlen(pass), hash);
+            // Convert binary hash to hex string
+            for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+                sprintf(hexstr + (i * 2), "%02x", hash[i]);
+            }
+            hexstr[SHA256_DIGEST_LENGTH * 2] = '\0';
+        }else{
+            strcpy(hexstr,pass); // admin passes are not hashed
+        }
+        
+
         // if the password is correct
-        if (strcmp(pass,actives->password)==0)
+        if (strcmp(hexstr,actives->password)==0)
         {
             // checks if that client is already logged in
 
@@ -453,8 +467,15 @@ int authenticate_user(int client_fd, char *email) {
         writeStr(client_fd, password_prompt);
         nread = read(client_fd, pass, 200 - 1);
         pass[nread - 2] = '\0';
+
+        SHA256((unsigned char*)pass, strlen(pass), hash);
+        // Convert binary hash to hex string
+        for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+            sprintf(hexstr + (i * 2), "%02x", hash[i]);
+        }
+        hexstr[SHA256_DIGEST_LENGTH * 2] = '\0';
         
-        if (strcmp(pass,eng->password) == 0)
+        if (strcmp(hexstr,eng->password) == 0)
         {
             if (eng->status == 1){ // status pending
                 writeStr(client_fd, "\nRegistration pending\n");
@@ -473,7 +494,14 @@ int authenticate_user(int client_fd, char *email) {
         nread = read(client_fd, pass, 200 - 1);
         pass[nread - 2] = '\0';
 
-        if (strcmp(pass,org->password) == 0)
+        SHA256((unsigned char*)pass, strlen(pass), hash);
+        // Convert binary hash to hex string
+        for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+            sprintf(hexstr + (i * 2), "%02x", hash[i]);
+        }
+        hexstr[SHA256_DIGEST_LENGTH * 2] = '\0';
+
+        if (strcmp(hexstr,org->password) == 0)
         {
             if (org->status == 1){ // status pending
                 writeStr(client_fd, "\nRegistration pending\n");
@@ -498,7 +526,6 @@ int authenticate_user(int client_fd, char *email) {
 void manageOrganizations(int client_fd, organization* organizations, int size){
 
     organization* currentOrg = organizations;
-    char buffer[1024];
     int choice;
     int count = 0;
 
@@ -568,7 +595,6 @@ void manageOrganizations(int client_fd, organization* organizations, int size){
 void manageEngineers(int client_fd, engineer* engineers, int size){
 
     engineer* currentEng = engineers;
-    char buffer[1024];
     int choice;
     int count = 0;
 
@@ -634,7 +660,6 @@ void manageEngineers(int client_fd, engineer* engineers, int size){
 void manageChallenges(int client_fd, challenge* challenge_list, int size){
     
     challenge* currentChall = challenge_list;
-    char buffer[1024];
     int choice;
     int count = 0;
 
@@ -688,7 +713,7 @@ void manageChallenges(int client_fd, challenge* challenge_list, int size){
 ///////////////////prevent duplicate applications
 void applyChallenges(int client_fd, challenge* challenge_list, int size, engineer** eng){
     challenge* currentChall = challenge_list;
-    char buffer[1024], auxStr[600], *chal=NULL;
+    char auxStr[600], *chal=NULL;
     int choice;
     int count = 0;
 

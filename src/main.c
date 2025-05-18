@@ -2,7 +2,6 @@
 #include <signal.h>
 
 #include "server.h"
-#include "engineers.h"
 
 void error(char* msg) {
     printf("Error: %s\n", msg);
@@ -28,9 +27,12 @@ int main() {
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
     addr.sin_port = htons(SERVER_PORT);
 
+
     /* replaces the handles for ctrl+C and ctrl+\ to guarantee that every client is logged out when the server is terminated*/
     signal(SIGINT, logouts);
     signal(SIGKILL, logouts);
+
+
 
     if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         error("in function socket");

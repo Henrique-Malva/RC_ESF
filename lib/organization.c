@@ -168,6 +168,8 @@ void organizationRegister(int client_fd) {
 
     char orgName[100], tax[20], email[100], address[200], description[300], phone[20], pass[20], buffer[BUF_SIZE];
     int nread, check=0, taxID;
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    char hexstr[SHA256_DIGEST_LENGTH*2+1];
 
     // Get organization details
     write(client_fd, "\nEnter the organization name: ", strlen("\nEnter the organization name: "));
@@ -178,6 +180,13 @@ void organizationRegister(int client_fd) {
     write(client_fd, "Enter a password: ", strlen("Enter a password: "));
     nread = read(client_fd, pass, 20 - 1);
     pass[nread - 2] = '\0';
+
+    SHA256((unsigned char*)pass, strlen(pass), hash);
+    // Convert binary hash to hex string
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        sprintf(hexstr + (i * 2), "%02x", hash[i]);
+    }
+    hexstr[SHA256_DIGEST_LENGTH * 2] = '\0';
 
 
     do
@@ -230,7 +239,7 @@ void organizationRegister(int client_fd) {
     write(client_fd, "\n Registration successful!\n", strlen("\n Registration successful!\n"));
 
     
-    add_organization(orgName,taxID,email,address,description,phone,pass,1);
+    add_organization(orgName,taxID,email,address,description,phone,hexstr,1);
     
 }
 
