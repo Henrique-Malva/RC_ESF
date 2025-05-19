@@ -1,6 +1,6 @@
 #include "organization.h"
 
-#define MAX_ORGANIZATIONS 100  // Define a maximum or manage dynamic resizing
+
 
 typedef struct {
     organization* organizations;
@@ -164,7 +164,7 @@ int get_all_organizations(organization** organizations, char* condition) {
 }
 
 void organizationRegister(int client_fd) {
-    organization* o;
+    organization* o; engineer* eng;
 
     char orgName[100], tax[20], email[100], address[200], description[300], phone[20], pass[20], buffer[BUF_SIZE];
     int nread, check=0, taxID;
@@ -219,7 +219,7 @@ void organizationRegister(int client_fd) {
         email[nread - 2] = '\0';
         sprintf(buffer,"where email='%s'",email);
 
-    } while (get_all_organizations(&o,buffer));
+    } while (get_all_organizations(&o,buffer) || get_all_engineers(&eng,buffer));
     check=0;
     
 

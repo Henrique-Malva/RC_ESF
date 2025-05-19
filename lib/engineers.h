@@ -2,8 +2,10 @@
 #define ENGINEERS_API_H
 
 #include "structs.h"
+#include "organization.h"
 
 #define BUF_SIZE 1024
+#define MAX_ENGINEERS 100  // Define a maximum or manage dynamic resizing
 
 int add_engineer(char* name, int number, char* specialty, char* institution, bool student, char* areas_of_expertise, char* email, char* phone, char* password, int status, char* chal);
 int update_engineer(engineer* engineers);

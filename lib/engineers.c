@@ -1,6 +1,5 @@
 #include "engineers.h"
 
-#define MAX_ENGINEERS 100  // Define a maximum or manage dynamic resizing
 
 typedef struct {
     engineer* engineers;
@@ -184,7 +183,7 @@ void engineerRegister(int client_fd) {
     char hexstr[SHA256_DIGEST_LENGTH*2+1];
 
     char buf[10], buffer[BUF_SIZE];
-    engineer* eng; 
+    engineer* eng; organization* org;
 
     int check=0, nread;
 
@@ -253,7 +252,7 @@ void engineerRegister(int client_fd) {
         email[nread - 2] = '\0';
 
         sprintf(buffer,"where email='%s'", email);
-    } while (get_all_engineers(&eng,buffer));
+    } while (get_all_engineers(&eng,buffer) || get_all_organizations(&org,buffer));
     check=0;
 
     write(client_fd, "Enter your mobile phone number (optional): ", strlen(" Enter your mobile phone number (optional): "));

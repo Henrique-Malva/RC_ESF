@@ -26,6 +26,10 @@ void writeStr(int client_fd, char* str);
 
 void deleteFromString(char string[], char substr[]);
 
+void kill_challenge(challenge** c);
+void kill_organization(organization** o);
+void kill_engineer(engineer** e);
+
 void manageOrganizations(int client_fd, organization* organizations, int size);
 void manageEngineers(int client_fd, engineer* engineers, int size);
 void manageChallenges(int client_fd, challenge* challenge_list, int size);

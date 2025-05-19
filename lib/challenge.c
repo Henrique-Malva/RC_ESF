@@ -1,6 +1,5 @@
 #include "challenge.h"
 
-#define MAX_CHALLENGES 100  // Define a maximum or manage dynamic resizing
 
 typedef struct {
     challenge* challenges;

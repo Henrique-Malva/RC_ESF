@@ -4,6 +4,7 @@
 #include "structs.h"
 
 #define BUF_SIZE 1024
+#define MAX_CHALLENGES 100  // Define a maximum or manage dynamic resizing
 
 int add_challenge(char* name, char* description, char* type, int hours, int organization_id, bool status, char* app);
 int update_challenge(challenge* challenges);

@@ -54,6 +54,116 @@ void deleteFromString(char string[], char substr[]){
     string[i] = '\0';
 }
 
+void kill_challenge(challenge** c){
+    char apps[6*MAX_ENGINEERS], *indiviEng, auxStr[20], *auxPnt;
+    int eng_ID, index; //, status;
+    engineer* e;
+
+    strcpy(apps,(*c)->applicants);
+    indiviEng = strtok(apps,":");
+    while (indiviEng != NULL) // go to every engineer that applied
+    {
+        eng_ID=atoi(indiviEng); // get its ID
+        sprintf(auxStr,"where id=%d",eng_ID);
+        get_all_engineers(&e,auxStr); // and the engineer itself
+
+        indiviEng = strtok (NULL, ":"); // gets the next applicant on indiviEng
+
+        // if a challenge is removed it makes sense that its applicants now that their application wasn't rejected
+        // but that the challenge itself was removed
+        // so a new challenge application status to reflect that
+        sprintf(auxStr,"%d:",(*c)->id);
+        auxPnt = strstr(e->chal,auxStr);
+        index = auxPnt - e->chal; // this index corresponds to the first char of chalID: on the applied to list
+        // go to the status index
+        index=index+strlen(auxStr); // example 452:(status) at index 4. has size 4. if the 4 is at index 4 then (status) is at index 8. index(4) + size(4) = stat_index(8)
+        // replace
+        (e->chal)[index] = '3';
+
+        update_engineer(e);
+    }
+
+    remove_challenge((*c)->id);
+}
+
+// function to remove a organization from the database
+void kill_organization(organization** o){
+    challenge* c;
+    char cond[BUF_SIZE];
+    int chal_nr, count=0;
+    sprintf(cond,"where organization_id='%d'",(*o)->organizationId);
+    chal_nr=get_all_challenges(&c,cond);
+    
+    // to remove a org, all of its associated challenges also have to be removed
+    while (count<chal_nr)
+    {
+        kill_challenge(&c);
+        count++;
+    }
+
+    remove_actives((*o)->email);
+    remove_organization((*o)->email);
+    
+}
+
+// function to remove a engineer and every trace of it from the database
+// in the future if an engineer that is accepted to a challenge deletes his account the organization should be able to know that he exited the platform
+// (basically repeat )
+void kill_engineer(engineer** e){
+    char chals[6*MAX_CHALLENGES], *indiviChal, auxStr[20], *auxPnt;
+    int chal_ID, status, nr, index;
+    strcpy(chals,(*e)->chal);
+    challenge *c;
+
+
+    indiviChal = strtok(chals,":");
+    
+    while (indiviChal != NULL) // goes to every challenge this engi applied to
+    {
+        chal_ID=atoi(indiviChal);
+        sprintf(auxStr,"where id=%d",chal_ID);
+        nr = get_all_challenges(&c,auxStr);
+
+        indiviChal = strtok(NULL, ",");
+        status=atoi(indiviChal);
+        indiviChal = strtok (NULL, ":");
+
+        // remove the application from the challenge list, only necessary if not rejected and the challenge still exists
+        // for the future: if the status is accepted instead of removing just changing the status value on the applicant list and make code to show the org that that status value indicates that an accepted candidate removed its profile
+        if (status!=2 && nr!=0)
+        {
+            // find the application on the applicants list of the challenge
+            sprintf(auxStr,"%d:%d",(*e)->id,status);
+            auxPnt = strstr(c->applicants,auxStr);
+            index = auxPnt - c->applicants; // this index is the first one of engId:status
+
+            
+            // verification of the position of the application to be removed in the applicants list to format correctly the substring to be removed
+            if ( (strlen(c->applicants)-1) == (index + strlen(auxStr)-1)) // if it is the last piece of the string
+            // if the last index of the applicants list is equal to the status index on engID:status, the applicant is in the last position
+            {
+                if (index==0) // and also the first one -> no commas to worry about
+                {
+                    deleteFromString(c->applicants,auxStr);
+                }else{ // not the first -> have to remove the comma that is behind
+                    sprintf(auxStr,",%d:%d",(*e)->id,status);
+                    deleteFromString(c->applicants,auxStr);
+                }
+            }else{ // if it is somewhere in the middle -> remove the comma that is in front
+                sprintf(auxStr,"%d:%d,",(*e)->id,status);
+                deleteFromString(c->applicants,auxStr);
+            }
+
+            update_challenge(c);
+
+        }    
+
+    }
+
+    remove_actives((*e)->email);
+    remove_engineer((*e)->email);
+}
+
 int closeFunction() { return -1; }
 
 // main client handling function where the operation flow is handled
@@ -176,8 +286,7 @@ void send_engineer_menu(int client_fd, char *email) {
                 close(client_fd);
                 break;
             case 5: // delete account
-                remove_actives(email);
-                remove_engineer(email);
+                kill_engineer(&eng);
                 close(client_fd);
                 break;
             default:
@@ -274,8 +383,9 @@ void send_organization_menu(int client_fd, char *email) {
                             } while (app_again);
 
                             break;
-                        case 3: 
-                            remove_challenge(currentChall->id);
+                        case 3:
+                            kill_challenge(&currentChall);
+                            //remove_challenge(currentChall->id);
                             break;
                         case 5: goback=1; break;
 
@@ -305,19 +415,8 @@ void send_organization_menu(int client_fd, char *email) {
                 close(client_fd);
                 break;
             case 4: // delete account
-                remove_actives(email);
-                sprintf(buffer,"where organization_id='%d'",org->organizationId);
-                n = get_all_challenges(&c, buffer);
-                count = 0;
-                challenge* curChall = c;
-                while (count<n)
-                {
-                    curChall = c + count;
-                    remove_challenge(curChall->id);
-                    count++;
-                }
                 
-                remove_organization(email);
+                kill_organization(&org);
 
                 close(client_fd);
             default: 
@@ -490,7 +589,7 @@ int authenticate_user(int client_fd, char *email) {
                 writeStr(client_fd, "\nRegistration pending\n");
             }else { // status rejected
                 writeStr(client_fd, "\nRegistration rejected. Please re-register or contact support\n");
-                remove_engineer(email);
+                kill_engineer(&eng);
             }
             return -1;
             
@@ -516,7 +615,11 @@ int authenticate_user(int client_fd, char *email) {
                 writeStr(client_fd, "\nRegistration pending\n");
             }else { // status rejected
                 writeStr(client_fd, "\nRegistration rejected. Please re-register or contact support\n");
-                remove_organization(email);
+                // even though this organization removal is from a rejected registration
+                // since the admin can change the registration from accepted to rejected
+                // theres a possibility the organization interacted with the system, so full removal is required
+                kill_organization(&org);
+                //remove_organization(email);
             }
 
             return -1;
@@ -577,13 +680,17 @@ void manageOrganizations(int client_fd, organization* organizations, int size){
                 break; // change registration status to approved
             case 2: currentOrg->status = 1; remove_actives(currentOrg->email); break; // change registration status to pending and removes from accepted clients
             case 3: currentOrg->status = 2; remove_actives(currentOrg->email); break; // change registration status to rejected and removes from accepted clients
-            case 4: remove_actives(currentOrg->email); remove_organization(currentOrg->email); break; // delete organization
+            case 4: kill_organization(&currentOrg); break; // delete organization
             case 6: return; // previous menu
             default: break; // next org
 
         }
 
-        update_organization(currentOrg);
+        if (choice!=4)
+        {
+            update_organization(currentOrg);
+        }
+        
         count++;
 
         // at the end of the ONG list, aks the admin if he wants to see the list again or go back to the previous menu
@@ -644,12 +751,17 @@ void manageEngineers(int client_fd, engineer* engineers, int size){
             break;
             case 2: currentEng->status = 1; remove_actives(currentEng->email); break;
             case 3: currentEng->status = 2; remove_actives(currentEng->email); break;
-            case 4: remove_engineer(currentEng->email); break; // delete engineer
+            case 4: kill_engineer(&currentEng); break; // delete engineer
             case 6: return;
-
+            default: break; // next eng
         }
 
-        update_engineer(currentEng);
+        if (choice!=4)
+        {
+            update_engineer(currentEng);
+        }
+
+        
         count++;
 
         if(count == size){
@@ -723,7 +835,7 @@ void manageChallenges(int client_fd, challenge* challenge_list, int size){
 ///////////////////prevent duplicate applications
 void applyChallenges(int client_fd, challenge* challenge_list, int size, engineer** eng){
     challenge* currentChall = challenge_list;
-    char auxStr[600], *chal=NULL;
+    char auxStr[6*MAX_CHALLENGES], *chal=NULL;
     int choice;
     int count = 0;
 
@@ -777,7 +889,7 @@ void applyChallenges(int client_fd, challenge* challenge_list, int size, enginee
                             sprintf(auxStr,"%s,%d:0",(*eng)->chal,currentChall->id);
                         }
                         // copies to the engineer struct and updates the db table
-                        strcpy((*eng)->chal,auxStr);
+                        strcpy((*eng)->chal, auxStr);
                         update_engineer((*eng));
                     }else{
                         writeStr(client_fd,"\nAlready applied to this challenge\n");
@@ -864,7 +976,7 @@ void engProfileUpdate(int client_fd, engineer** eng){
                     "\nSelect field to update: ";
     int choice, nread, check=0;
     uint8_t leave=0;
-    char buffer[BUF_SIZE], cond[BUF_SIZE];
+    char buffer[BUF_SIZE], cond[BUF_SIZE+15];
     engineer* engs;
     active* act;
     sprintf(cond,"where email='%s'",(*eng)->email);
@@ -884,7 +996,6 @@ void engProfileUpdate(int client_fd, engineer** eng){
             buffer[nread-2] = '\0';
 
             strcpy((*eng)->name,buffer);
-
             break;
         case 2:
             do
@@ -956,7 +1067,7 @@ void engProfileUpdate(int client_fd, engineer** eng){
 
 // funtion to allow the engineer to know the status of his application in the challenges he applied to
 void viewApplicationStatus(int client_fd, engineer** eng){
-    char chals[600], *indiviChal, auxStr[20];
+    char chals[6*MAX_CHALLENGES], *indiviChal, auxStr[20];
     int chal_ID, status, chal_nr=0, removals=0;
     strcpy(chals,(*eng)->chal);
     challenge *c;
@@ -976,11 +1087,17 @@ void viewApplicationStatus(int client_fd, engineer** eng){
         sprintf(auxStr,"where id=%d",chal_ID);
         get_all_challenges(&c,auxStr);
 
-        printChal(client_fd,c,0);
+        
 
         indiviChal = strtok(NULL, ",");
         status=atoi(indiviChal);
         indiviChal = strtok (NULL, ":");
+
+        if (status!=3)
+        {
+            printChal(client_fd,c,0);
+        }
+
         switch (status)
         {
         case 0: // pending
@@ -990,7 +1107,14 @@ void viewApplicationStatus(int client_fd, engineer** eng){
             writeStr(client_fd,"\nApplication status: Approved\n\n");
             break;
         case 2: // rejected
-            writeStr(client_fd,"\nApplication status: Rejected\n\n");
+        case 3: // challenge removed
+            if (status==2)
+            {
+                writeStr(client_fd,"\nApplication status: Rejected\n\n");
+            }else{
+                writeStr(client_fd,"\nThis Challenge was Removed\n\n");
+            }
+            
             if (!removals)
             {
                 removals=1;
@@ -1035,7 +1159,7 @@ void manageApplications(int client_fd, challenge **c){
                           //"5. Previous menu\n"
                           "Your choice(1-4): ";
 
-    char app[600], *indiviEng, auxStr[20], *auxPnt;
+    char app[6*MAX_ENGINEERS], *indiviEng, auxStr[20], *auxPnt;
     int eng_ID, status, eng_nr=0, changes=0, choice, new_status, index;
     strcpy(app,(*c)->applicants);
     engineer *e;
