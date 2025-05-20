@@ -65,9 +65,10 @@ void kill_challenge(challenge** c){
     {
         eng_ID=atoi(indiviEng); // get its ID
         sprintf(auxStr,"where id=%d",eng_ID);
-        get_all_engineers(&e,auxStr); // and the engineer itself
-
-        indiviEng = strtok (NULL, ":"); // gets the next applicant on indiviEng
+        get_all_engineers(&e,auxStr); // and the engineer 
+        
+        indiviEng = strtok(NULL, ",");
+        indiviEng = strtok(NULL, ":"); // gets the next applicant on indiviEng
 
         // if a challenge is removed it makes sense that its applicants now that their application wasn't rejected
         // but that the challenge itself was removed
@@ -81,8 +82,8 @@ void kill_challenge(challenge** c){
         (e->chal)[index] = '3';
 
         update_engineer(e);
+        
     }
-
     remove_challenge((*c)->id);
 }
 
@@ -232,6 +233,11 @@ void process_client(int client_fd) {
         default:
             break;
         }
+        if (choice==1) // there was a logout
+        {
+            return;
+        }
+        
     } while (choice!=4);
 }
 
@@ -283,11 +289,11 @@ void send_engineer_menu(int client_fd, char *email) {
                 // guarantee that the db table is updated to mirror a logout
                 a->status=0;
                 update_active(a);
-                close(client_fd);
+                //close(client_fd);
                 break;
             case 5: // delete account
                 kill_engineer(&eng);
-                close(client_fd);
+                //close(client_fd);
                 break;
             default:
                 // no need for default since getSelectedOptionInRange is blocking until the option is in the correct range
@@ -412,18 +418,17 @@ void send_organization_menu(int client_fd, char *email) {
                 // guarantee that the db table is updated to mirror a logout
                 a->status=0;
                 update_active(a);
-                close(client_fd);
-                break;
+                //close(client_fd);
             case 4: // delete account
                 
                 kill_organization(&org);
 
-                close(client_fd);
+                //close(client_fd);
             default: 
                 break;
                 
         }
-    } while (choice!=4 && choice!=5); // repeats unless the user logged out or deleted account
+    } while (choice!=3 && choice!=4); // repeats unless the user logged out or deleted account
     
     
 }
@@ -480,7 +485,7 @@ void send_admin_menu(int client_fd, char* email) {
                 get_all_actives(&a,buffer);
                 a->status=0;
                 update_active(a);
-                close(client_fd);
+                //close(client_fd);
                 break;
         }
     }while(state!=4);
@@ -839,7 +844,7 @@ void applyChallenges(int client_fd, challenge* challenge_list, int size, enginee
     int choice;
     int count = 0;
 
-    char* option_prompt = "\nPlease select one of the options below\n"
+    char* option_prompt = "\n\nPlease select one of the options below\n"
                           "1. Apply\n"
                           "2. Next challenge\n"
                           "3. Previous menu\n"
@@ -1112,7 +1117,7 @@ void viewApplicationStatus(int client_fd, engineer** eng){
             {
                 writeStr(client_fd,"\nApplication status: Rejected\n\n");
             }else{
-                writeStr(client_fd,"\nThis Challenge was Removed\n\n");
+                writeStr(client_fd,"\nThe Challenge here previously was Removed\n\n");
             }
             
             if (!removals)
